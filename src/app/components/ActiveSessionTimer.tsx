@@ -88,7 +88,7 @@ export default function ActiveSessionTimer({ areas, onSaveSession }: { areas: Ar
         <div className="text-xl font-bold text-foreground mb-8 text-center">{form.topicName}</div>
 
         <div className="relative flex items-center justify-center w-64 h-64 mb-8">
-          <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+          <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 256 256">
             <circle cx="128" cy="128" r="120" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
             <circle cx="128" cy="128" r="120" stroke={color} strokeWidth="8" fill="transparent" 
               strokeDasharray={2 * Math.PI * 120} 

@@ -114,7 +114,7 @@ export default function ManageAreasPage({ areas, onSave }: { areas: Area[]; onSa
   };
 
   return (
-    <div className="p-6 max-w-[900px] mx-auto space-y-6">
+    <div className="p-6 sm:p-8 w-full max-w-[2000px] mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">

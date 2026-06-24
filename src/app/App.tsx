@@ -342,7 +342,7 @@ function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName, on
 
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px]">
+    <div className="p-6 sm:p-8 space-y-10 w-full max-w-[2000px] mx-auto">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
@@ -419,7 +419,7 @@ function AreaPage({ area, onUpdate }: {
   const selectedTopic = area.topics.find(t => t.id === selectedTopicId);
 
   return (
-    <div className="p-6 max-w-[1200px] space-y-8">
+    <div className="p-6 sm:p-8 space-y-10 w-full max-w-[2000px] mx-auto">
       {/* Header */}
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -699,7 +699,7 @@ function SessionsSection({ areas, sessions }: {
   const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
 
   return (
-    <div className="p-6 space-y-5 max-w-[900px]">
+    <div className="space-y-5 w-full mt-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Sessões de Estudo</h1>
