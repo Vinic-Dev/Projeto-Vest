@@ -115,7 +115,7 @@ export default function ManageAreasPage({ areas, onSave }: { areas: Area[]; onSa
 
   return (
     <div className="p-6 max-w-[900px] mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Settings className="w-6 h-6 text-primary" />
@@ -123,7 +123,7 @@ export default function ManageAreasPage({ areas, onSave }: { areas: Area[]; onSa
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Crie e edite sua grade curricular de estudos personalizada.</p>
         </div>
-        <button onClick={handleSave} className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center gap-2">
+        <button onClick={handleSave} className="w-full sm:w-auto bg-primary text-primary-foreground px-4 py-2 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
           <Save className="w-4 h-4" />
           Salvar Alterações
         </button>

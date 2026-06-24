@@ -239,7 +239,11 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
   };
 
   return (
-    <aside className={`flex-shrink-0 flex flex-col border-r border-border bg-sidebar transition-all duration-300 ${collapsed ? "w-14" : "w-56"}`}>
+    <>
+      {!collapsed && (
+        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden" onClick={onToggle} />
+      )}
+      <aside className={`fixed md:relative z-50 h-full flex-shrink-0 flex flex-col border-r border-border bg-sidebar transition-transform md:transition-all duration-300 ${collapsed ? "-translate-x-full md:translate-x-0 md:w-14" : "translate-x-0 w-64 md:w-56"}`}>
       <div className="flex items-center gap-2.5 px-3 py-4 border-b border-border">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#34d399,#60a5fa)" }}>
           <GraduationCap className="w-4.5 h-4.5 text-white" />
@@ -250,7 +254,7 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
             <div className="text-[10px] text-muted-foreground mt-0.5 leading-none">{DAYS_TO_VEST}d para o vestibular</div>
           </div>
         )}
-        <button onClick={onToggle} className="ml-auto text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+        <button onClick={onToggle} className="ml-auto text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 hidden md:block">
           <Menu className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -309,6 +313,7 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
         </button>
       </div>
     </aside>
+    </>
   );
 }
 
@@ -360,7 +365,7 @@ function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName, on
       </div>
 
       {/* Area Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {areas.map(area => {
           const pct = calcProgress(area);
           const subtopics = area.topics.flatMap(t => t.subtopics);
@@ -599,7 +604,7 @@ function AnalyticsSection({ areas, sessions }: { areas: Area[]; sessions: Sessio
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={Clock} label="Horas estudadas" value={`${(totalMinutes / 60).toFixed(0)}h`} sub="últimos 30 dias" color="#60a5fa" />
         <StatCard icon={Calendar} label="Dias de estudo" value={`${studyDays}`} sub="últimos 30 dias" color="#a78bfa" />
         <StatCard icon={Award} label="Subtópicos dominados" value={`${masteredCount}`} sub={`de ${allSubs.length} total`} color="#34d399" />
@@ -670,7 +675,7 @@ function AnalyticsSection({ areas, sessions }: { areas: Area[]; sessions: Sessio
           <AlertCircle className="w-4 h-4 text-red-400" />
           <div className="text-sm font-medium text-foreground">Tópicos que precisam de atenção</div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {weakTopics.map(item => (
             <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-white/2">
               <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.areaColor }} />
@@ -735,8 +740,9 @@ function SessionsSection({ areas, sessions }: {
 }
 
 // ─── Top Bar ──────────────────────────────────────────────────────────────────
-function TopBar({ page, selectedArea, onSearch, userInitials }: {
+function TopBar({ page, selectedArea, onSearch, userInitials, onToggleSidebar }: {
   page: Page; selectedArea: Area | null; onSearch: () => void; userInitials: string;
+  onToggleSidebar?: () => void;
 }) {
   const titles: Record<Page, string> = {
     dashboard: "Dashboard", area: selectedArea?.name || ""
@@ -745,6 +751,9 @@ function TopBar({ page, selectedArea, onSearch, userInitials }: {
   return (
     <header className="h-14 flex-shrink-0 border-b border-border flex items-center gap-4 px-5">
       <div className="flex-1 flex items-center gap-2">
+        <button onClick={onToggleSidebar} className="md:hidden mr-1 text-muted-foreground hover:text-foreground">
+          <Menu className="w-5 h-5" />
+        </button>
         {selectedArea && (
           <div className="w-2 h-2 rounded-full" style={{ background: selectedArea.color }} />
         )}
@@ -783,7 +792,7 @@ export default function App() {
   const [page, setPage] = useState<Page>("dashboard");
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < 768);
 
   // ─── Derived ───────────────────────────────────────────────
   const userInitials = useMemo(() => {
@@ -1026,7 +1035,7 @@ export default function App() {
         onLogout={handleLogout}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar page={page} selectedArea={selectedArea} onSearch={() => setSearchOpen(true)} userInitials={userInitials} />
+        <TopBar page={page} selectedArea={selectedArea} onSearch={() => setSearchOpen(true)} userInitials={userInitials} onToggleSidebar={() => setSidebarCollapsed(v => !v)} />
         <main className="flex-1 overflow-y-auto">
           {page === "dashboard" && (
             <DashboardPage areas={areas} sessions={sessions} onSelectArea={handleSelectArea} onNavigate={handleNavigate} userName={userName} onAddSession={handleAddSession} />
