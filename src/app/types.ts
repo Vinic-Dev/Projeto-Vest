@@ -35,8 +35,9 @@ export interface Session {
 
 export interface ScheduleEvent {
   id: string;
-  dayOfWeek: number; // 0 (Dom) to 6 (Sab)
+  date: string; // YYYY-MM-DD
   startHour: number; // 6 to 23
   durationHours: number;
   areaId: string;
+  subtopicId: string;
 }
