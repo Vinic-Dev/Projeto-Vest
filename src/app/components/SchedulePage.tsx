@@ -170,6 +170,7 @@ export default function SchedulePage({ areas, events, onSave }: {
           ))}
 
           {events.filter(e => {
+            if (!e.date) return false;
             const ed = parseYmd(e.date);
             return ed >= weekStart && ed <= weekDays[6];
           }).map(evt => {
@@ -208,7 +209,11 @@ export default function SchedulePage({ areas, events, onSave }: {
 
   const renderMonthView = () => {
     const map: Record<string, ScheduleEvent[]> = {};
-    events.forEach(e => { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); });
+    events.forEach(e => { 
+      if (!e.date) return;
+      if (!map[e.date]) map[e.date] = []; 
+      map[e.date].push(e); 
+    });
 
     return (
       <div className="bg-card border border-border rounded-xl shadow-sm mt-6 overflow-hidden">
