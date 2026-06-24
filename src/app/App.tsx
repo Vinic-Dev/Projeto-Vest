@@ -270,10 +270,7 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
           );
         })}
 
-        {!collapsed && <div className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest px-3 pt-3 pb-1">Análise</div>}
 
-        {navItem("analytics", BarChart3, "Analytics")}
-        {navItem("sessions", Clock, "Sessões")}
       </nav>
 
       <div className="p-3 border-t border-border space-y-2">
@@ -304,10 +301,10 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
 }
 
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
-function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName }: {
+function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName, onAddSession }: {
   areas: Area[]; sessions: Session[];
   onSelectArea: (id: string) => void; onNavigate: (p: Page) => void;
-  userName: string;
+  userName: string; onAddSession: (s: Session) => void;
 }) {
   const radarData = areas.map(a => ({ area: a.short, value: calcProgress(a), color: a.color }));
   const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
@@ -374,88 +371,8 @@ function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName }: 
         })}
       </div>
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="text-sm font-medium text-foreground mb-4">Visão Geral por Área</div>
-          <ResponsiveContainer width="100%" height={220}>
-            <RadarChart data={radarData}>
-              <PolarGrid gridType="polygon" stroke="rgba(0,0,0,0.06)" />
-              <PolarAngleAxis dataKey="area" tick={{ fill: "#6b7a94", fontSize: 11, fontFamily: "Lexend" }} />
-              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-              <Radar dataKey="value" fill="rgba(16,185,129,0.12)" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="text-sm font-medium text-foreground mb-4">Horas de Estudo por Dia da Semana</div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={weeklyData} barSize={24}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(0,0,0,0.05)" vertical={false} />
-              <XAxis dataKey="day" tick={{ fill: "#6b7a94", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#6b7a94", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} unit="h" />
-              <Tooltip
-                contentStyle={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: "#1a1e2e" }}
-                cursor={{ fill: "rgba(0,0,0,0.03)" }} />
-              <Bar dataKey="minutos" name="horas" fill="#10b981" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Upcoming reviews */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-sm font-medium text-foreground">Revisões Agendadas</div>
-            <RotateCcw className="w-4 h-4 text-muted-foreground" />
-          </div>
-          <div className="space-y-2">
-            {upcoming.length === 0 && (
-              <div className="text-sm text-muted-foreground py-4 text-center">Nenhuma revisão pendente</div>
-            )}
-            {upcoming.map(item => (
-              <div key={item.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.areaColor }} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-foreground truncate">{item.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{item.areaName}</div>
-                </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${item.daysLeft <= 0 ? "bg-red-500/15 text-red-400" : item.daysLeft === 1 ? "bg-yellow-500/15 text-yellow-400" : "bg-blue-500/15 text-blue-400"}`}
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  {item.daysLeft <= 0 ? "Hoje" : item.daysLeft === 1 ? "Amanhã" : `+${item.daysLeft}d`}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent sessions */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-sm font-medium text-foreground">Sessões Recentes</div>
-            <button onClick={() => onNavigate("sessions")} className="text-xs text-primary hover:text-primary/80 transition-colors">Ver todas</button>
-          </div>
-          <div className="space-y-2">
-            {sessions.slice(0, 5).map(s => {
-              const area = areas.find(a => a.id === s.areaId);
-              return (
-                <div key={s.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: area?.color }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-foreground truncate">{s.topicName}</div>
-                    <div className="text-[11px] text-muted-foreground">{s.date}</div>
-                  </div>
-                  <span className="text-xs text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.duration}min</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <AnalyticsSection areas={areas} sessions={sessions} />
+      <SessionsSection areas={areas} sessions={sessions} onAdd={onAddSession} />
     </div>
   );
 }
@@ -624,7 +541,7 @@ function StudyHeatmap({ sessions }: { sessions: Session[] }) {
 }
 
 // ─── Analytics Page ───────────────────────────────────────────────────────────
-function AnalyticsPage({ areas, sessions }: { areas: Area[]; sessions: Session[] }) {
+function AnalyticsSection({ areas, sessions }: { areas: Area[]; sessions: Session[] }) {
   const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
   const allSubs = areas.flatMap(a => a.topics.flatMap(t => t.subtopics));
   const masteredCount = allSubs.filter(s => s.status === "mastered").length;
@@ -648,10 +565,10 @@ function AnalyticsPage({ areas, sessions }: { areas: Area[]; sessions: Session[]
   ];
 
   return (
-    <div className="p-6 space-y-5 max-w-[1200px]">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Visão detalhada do seu desempenho</p>
+    <div className="space-y-5">
+      <div className="flex items-center gap-2 mt-4 border-t border-border pt-6">
+        <BarChart3 className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-semibold text-foreground">Analytics de Desempenho</h2>
       </div>
 
       {/* Stats */}
@@ -742,8 +659,8 @@ function AnalyticsPage({ areas, sessions }: { areas: Area[]; sessions: Session[]
   );
 }
 
-// ─── Sessions Page ────────────────────────────────────────────────────────────
-function SessionsPage({ areas, sessions, onAdd }: {
+// ─── Sessions Section ────────────────────────────────────────────────────────────
+function SessionsSection({ areas, sessions, onAdd }: {
   areas: Area[]; sessions: Session[];
   onAdd: (s: Session) => void;
 }) {
@@ -861,7 +778,7 @@ function TopBar({ page, selectedArea, onSearch, userInitials }: {
   page: Page; selectedArea: Area | null; onSearch: () => void; userInitials: string;
 }) {
   const titles: Record<Page, string> = {
-    dashboard: "Dashboard", area: selectedArea?.name || "", analytics: "Analytics", sessions: "Sessões de Estudo",
+    dashboard: "Dashboard", area: selectedArea?.name || ""
   };
 
   return (
@@ -1129,16 +1046,10 @@ export default function App() {
         <TopBar page={page} selectedArea={selectedArea} onSearch={() => setSearchOpen(true)} userInitials={userInitials} />
         <main className="flex-1 overflow-y-auto">
           {page === "dashboard" && (
-            <DashboardPage areas={areas} sessions={sessions} onSelectArea={handleSelectArea} onNavigate={handleNavigate} userName={userName} />
+            <DashboardPage areas={areas} sessions={sessions} onSelectArea={handleSelectArea} onNavigate={handleNavigate} userName={userName} onAddSession={handleAddSession} />
           )}
           {page === "area" && selectedArea && (
             <AreaPage area={selectedArea} onUpdate={handleUpdate} />
-          )}
-          {page === "analytics" && (
-            <AnalyticsPage areas={areas} sessions={sessions} />
-          )}
-          {page === "sessions" && (
-            <SessionsPage areas={areas} sessions={sessions} onAdd={handleAddSession} />
           )}
         </main>
       </div>
