@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { GraduationCap, Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
-import { signIn, signUp } from "../../lib/supabase";
+import { signIn } from "../../lib/supabase";
 
-type AuthTab = "login" | "signup";
-
-// Supabase Auth requires an email — we generate one from the username transparently
 const usernameToEmail = (username: string) => `${username.toLowerCase().trim()}@studyvestibular.app`;
 
+const ALLOWED_USERS = ["joaopedro", "vinicius"];
+
 export default function LoginPage({ onAuth }: { onAuth: () => void }) {
-  const [tab, setTab] = useState<AuthTab>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,35 +17,28 @@ export default function LoginPage({ onAuth }: { onAuth: () => void }) {
     e.preventDefault();
     setError("");
 
-    if (!username.trim()) {
+    const user = username.toLowerCase().trim().replace(/\s/g, "");
+
+    if (!user) {
       setError("Informe um nome de usuário.");
       return;
     }
-    if (username.trim().length < 3) {
-      setError("O nome de usuário deve ter pelo menos 3 caracteres.");
+
+    if (!ALLOWED_USERS.includes(user)) {
+      setError("Usuário não encontrado. Acesso restrito.");
       return;
     }
 
     setLoading(true);
-    const fakeEmail = usernameToEmail(username);
-
     try {
-      if (tab === "login") {
-        await signIn(fakeEmail, password);
-      } else {
-        await signUp(fakeEmail, password, username.trim());
-      }
+      await signIn(usernameToEmail(user), password);
       onAuth();
     } catch (err: any) {
-      const msg = err?.message || "Ocorreu um erro. Tente novamente.";
-      if (msg.includes("Invalid login")) {
-        setError("Usuário ou senha incorretos.");
-      } else if (msg.includes("already registered")) {
-        setError("Este usuário já existe. Faça login.");
-      } else if (msg.includes("Password should be")) {
-        setError("A senha deve ter pelo menos 6 caracteres.");
+      const msg = err?.message || "";
+      if (msg.includes("Invalid login") || msg.includes("invalid")) {
+        setError("Senha incorreta. Tente novamente.");
       } else {
-        setError(msg);
+        setError("Erro ao entrar. Tente novamente.");
       }
     } finally {
       setLoading(false);
@@ -75,30 +66,15 @@ export default function LoginPage({ onAuth }: { onAuth: () => void }) {
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Study Vestibular</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Sua plataforma de estudos para vestibulares
+            Acesso restrito — faça login para continuar
           </p>
         </div>
 
         {/* Card */}
         <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
-          {/* Tabs */}
-          <div className="flex border-b border-border">
-            {(["login", "signup"] as AuthTab[]).map(t => (
-              <button
-                key={t}
-                onClick={() => { setTab(t); setError(""); }}
-                className={`flex-1 py-3.5 text-sm font-medium transition-all relative ${
-                  tab === t
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground/70"
-                }`}
-              >
-                {t === "login" ? "Entrar" : "Criar Conta"}
-                {tab === t && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 rounded-full bg-primary" />
-                )}
-              </button>
-            ))}
+          <div className="px-6 pt-6 pb-2">
+            <h2 className="text-lg font-semibold text-foreground">Entrar</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Use seu nome de usuário e senha</p>
           </div>
 
           {/* Form */}
@@ -109,9 +85,9 @@ export default function LoginPage({ onAuth }: { onAuth: () => void }) {
                 <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <input
                   type="text"
-                  placeholder="seu_usuario"
+                  placeholder="joaopedro ou vinicius"
                   value={username}
-                  onChange={e => setUsername(e.target.value.replace(/\s/g, ""))}
+                  onChange={e => setUsername(e.target.value)}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
                   autoComplete="username"
                   required
@@ -125,13 +101,12 @@ export default function LoginPage({ onAuth }: { onAuth: () => void }) {
                 <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder={tab === "signup" ? "Mínimo 6 caracteres" : "Sua senha"}
+                  placeholder="Sua senha"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
-                  autoComplete={tab === "login" ? "current-password" : "new-password"}
+                  autoComplete="current-password"
                   required
-                  minLength={6}
                 />
                 <button
                   type="button"
@@ -139,15 +114,12 @@ export default function LoginPage({ onAuth }: { onAuth: () => void }) {
                   className="text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showPassword
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye className="w-4 h-4" />
-                  }
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Error message */}
+            {/* Error */}
             {error && (
               <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2.5">
                 <div className="w-1 h-1 rounded-full bg-destructive mt-1.5 flex-shrink-0" />
@@ -165,36 +137,14 @@ export default function LoginPage({ onAuth }: { onAuth: () => void }) {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  {tab === "login" ? "Entrar" : "Criar Conta"}
+                  Entrar
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
-
-            {/* Switch tab link */}
-            <p className="text-center text-xs text-muted-foreground pt-1">
-              {tab === "login" ? (
-                <>
-                  Não tem uma conta?{" "}
-                  <button type="button" onClick={() => { setTab("signup"); setError(""); }}
-                    className="text-primary hover:underline font-medium">
-                    Crie agora
-                  </button>
-                </>
-              ) : (
-                <>
-                  Já tem uma conta?{" "}
-                  <button type="button" onClick={() => { setTab("login"); setError(""); }}
-                    className="text-primary hover:underline font-medium">
-                    Faça login
-                  </button>
-                </>
-              )}
-            </p>
           </form>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-[11px] text-muted-foreground/50 mt-6">
           Plataforma de estudos para vestibulares
         </p>
