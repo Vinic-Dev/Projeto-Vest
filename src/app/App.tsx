@@ -500,7 +500,7 @@ function AreaPage({ area, onUpdate }: {
             <div className="flex-1 overflow-y-auto p-2">
               <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-4 py-3 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest border-b border-border sticky top-0 bg-card z-10">
                 <span>Subtópico</span>
-                <span className="hidden sm:block">Status</span>
+                <span>Status</span>
                 <span>Domínio</span>
                 <span className="hidden md:block">Próx. revisão</span>
               </div>
@@ -508,7 +508,7 @@ function AreaPage({ area, onUpdate }: {
                 {selectedTopic.subtopics.map(s => (
                   <div key={s.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 items-center px-4 py-4 hover:bg-white/3 transition-colors">
                     <div className="text-sm font-medium text-foreground pr-2">{s.name}</div>
-                    <button className="hidden sm:block" onClick={() => cycleStatus(s)} title="Clique para alterar o status">
+                    <button onClick={() => cycleStatus(s)} title="Clique para alterar o status">
                       <StatusBadge status={s.status} />
                     </button>
                     <MasteryStars score={s.mastery}
@@ -771,6 +771,10 @@ function TopBar({ page, selectedArea, onSearch, userInitials, onToggleSidebar }:
         <Zap className="w-3.5 h-3.5 text-yellow-400" />
         <span className="hidden sm:inline">{DAYS_TO_VEST}d para o vestibular</span>
       </div>
+
+      <a href="cart_o_animado_eu_te_amo.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-pink-500/20 text-pink-500 border border-pink-500/30 text-xs font-bold hover:bg-pink-500/30 transition-colors">
+        Surpresa 🎁
+      </a>
 
       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 border border-white/10 flex items-center justify-center text-xs font-semibold text-foreground">
         {userInitials}
