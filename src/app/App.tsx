@@ -446,6 +446,24 @@ function AreaPage({ area, onUpdate }: {
       </div>
       <ProgressBar value={pct} color={area.color} height={6} />
 
+      {/* Books Section */}
+      <div className="mt-8 mb-4">
+        <h2 className="text-xs font-bold text-muted-foreground/80 mb-4 uppercase tracking-widest">Materiais Didáticos</h2>
+        <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+          {area.topics.map(topic => (
+            <a key={topic.id} href={`livros/${encodeURIComponent(topic.name)}.pdf`} target="_blank" rel="noopener noreferrer" 
+               className="flex flex-col items-center gap-3 p-4 rounded-2xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all w-36 flex-shrink-0 group shadow-sm snap-start">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-primary/10 text-primary group-hover:scale-110 transition-transform shadow-inner">
+                <BookOpen className="w-7 h-7" />
+              </div>
+              <div className="text-xs font-bold text-center text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-3">
+                {topic.name}
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+
       {/* Grid of Topic Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {area.topics.map(topic => {
