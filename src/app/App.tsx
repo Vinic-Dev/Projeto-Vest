@@ -447,45 +447,75 @@ function AreaPage({ area, onUpdate }: {
       <ProgressBar value={pct} color={area.color} height={6} />
 
       {/* Books Section */}
-      <div>
-        <div style={{ fontSize: "11px", fontWeight: 700, color: area.color, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-          📚 Materiais Didáticos
-        </div>
-        <div style={{ display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem" }}>
-          {area.topics.map(topic => (
-            <a
-              key={topic.id}
-              href={`livros/${encodeURIComponent(topic.name)}.pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem",
-                padding: "1rem", borderRadius: "1rem",
-                border: `2px solid ${area.color}`,
-                background: `${area.color}22`,
-                minWidth: "130px", maxWidth: "150px", flexShrink: 0,
-                textDecoration: "none", cursor: "pointer",
-              }}
-            >
-              <div style={{
-                width: "56px", height: "56px", borderRadius: "12px",
-                background: area.color,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "28px",
-              }}>
-                📖
-              </div>
-              <div style={{
-                fontSize: "11px", fontWeight: 700, textAlign: "center",
-                color: area.color, lineHeight: "1.4",
-                display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
-              }}>
-                {topic.name}
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
+      {(() => {
+        const BOOKS: Record<string, { title: string; file: string }[]> = {
+          lin: [
+            { title: "Português Vol. 1", file: "MODERNA-PLUS-Portugues-contexto-interlocucao-e-sentido-1-1.pdf" },
+            { title: "Português Vol. 2", file: "MODERNA-PLUS-Portugues-contexto-interlocucao-e-sentido-2-1.pdf" },
+            { title: "Português Vol. 3", file: "MODERNA-PLUS-Portugues-contexto-interlocucao-e-sentido-3-1.pdf" },
+            { title: "Arte Vol. 1", file: "MODERNA-PLUS-Arte-1.pdf" },
+            { title: "Educação Física Vol. 1", file: "Moderna-Superacao-Educacao-Fisica-1.pdf" },
+          ],
+          mat: [
+            { title: "Matemática Vol. 1", file: "Moderna-Plus-Matematica-Paiva-1-1.pdf" },
+            { title: "Matemática Vol. 2", file: "Moderna-Plus-Matematica-Paiva-2-1.pdf" },
+            { title: "Matemática Vol. 3", file: "Moderna-Plus-Matematica-Paiva-3-1.pdf" },
+          ],
+          nat: [
+            { title: "Biologia Vol. 1", file: "Moderna-Plus-Biologia-Amabis-Martho-1.pdf" },
+            { title: "Física Vol. 1", file: "Moderna-Plus-Fisica-Ciencia-e-Tecnologia-1.pdf" },
+            { title: "Química Vol. 1", file: "Moderna-Plus-Quimica-na-abordagem-do-cotidiano-1.pdf" },
+          ],
+          hum: [
+            { title: "História Vol. 1", file: "Moderna-Plus-Historia-1.pdf" },
+            { title: "Geografia Vol. 1", file: "Moderna-Plus-Geografia-1.pdf" },
+            { title: "Filosofia Vol. 1", file: "Moderna-Plus-Filosofia-1.pdf" },
+            { title: "Sociologia Vol. 1", file: "Moderna-Plus-Sociologia-em-movimento-1.pdf" },
+          ],
+        };
+        const books = BOOKS[area.id] || [];
+        if (!books.length) return null;
+        return (
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: area.color, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              📚 Livros Didáticos
+            </div>
+            <div style={{ display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem" }}>
+              {books.map(book => (
+                <a
+                  key={book.file}
+                  href={`livros/${book.file}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem",
+                    padding: "1rem", borderRadius: "1rem",
+                    border: `2px solid ${area.color}`,
+                    background: `${area.color}22`,
+                    minWidth: "120px", maxWidth: "140px", flexShrink: 0,
+                    textDecoration: "none", cursor: "pointer",
+                  }}
+                >
+                  <div style={{
+                    width: "56px", height: "56px", borderRadius: "12px",
+                    background: area.color,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "28px",
+                  }}>
+                    📖
+                  </div>
+                  <div style={{
+                    fontSize: "11px", fontWeight: 700, textAlign: "center",
+                    color: area.color, lineHeight: "1.4",
+                  }}>
+                    {book.title}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Grid of Topic Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
