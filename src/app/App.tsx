@@ -4,11 +4,13 @@ import {
   BarChart3, Clock, Target, Search, ChevronDown, ChevronRight,
   Star, X, Menu, TrendingUp, Calendar, Zap, Award,
   Plus, AlertCircle, RotateCcw, Flame, Check, GraduationCap, Brain,
+  Database, Copy, Server, Key,
 } from "lucide-react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from "recharts";
+import { getSupabaseClient, getSupabaseConfig, SUPABASE_SQL_SETUP } from "../lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Status = "not_started" | "learning" | "practicing" | "mastered" | "revision_needed";
@@ -380,10 +382,11 @@ const AREA_ICONS: Record<string, React.ElementType> = {
   mat: Calculator, lin: BookOpen, nat: FlaskConical, hum: Globe,
 };
 
-function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectArea, collapsed, onToggle }: {
+function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectArea, collapsed, onToggle, supabaseConfigured, onOpenSupabaseSettings }: {
   page: Page; selectedAreaId: string | null; areas: Area[]; sessions: Session[];
   onNavigate: (p: Page) => void; onSelectArea: (id: string) => void;
   collapsed: boolean; onToggle: () => void;
+  supabaseConfigured: boolean; onOpenSupabaseSettings: () => void;
 }) {
   const navItem = (p: Page, Icon: React.ElementType, label: string) => {
     const active = page === p && !selectedAreaId;
@@ -443,8 +446,8 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
         {navItem("sessions", Clock, "Sessões")}
       </nav>
 
-      {!collapsed && (
-        <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-border space-y-2">
+        {!collapsed && (
           <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-white/5">
             <Flame className="w-4 h-4 text-orange-400 flex-shrink-0" />
             <div className="min-w-0">
@@ -452,8 +455,26 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
               <div className="text-[10px] text-muted-foreground">Sequência de estudos</div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        <button
+          onClick={onOpenSupabaseSettings}
+          className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg border text-left transition-all ${
+            supabaseConfigured
+              ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10"
+              : "bg-amber-500/5 border-amber-500/20 text-amber-400 hover:bg-amber-500/10"
+          }`}
+        >
+          <Database className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold leading-tight">Supabase</div>
+              <div className="text-[10px] text-muted-foreground leading-tight truncate">
+                {supabaseConfigured ? "Conectado" : "Configurar"}
+              </div>
+            </div>
+          )}
+        </button>
+      </div>
     </aside>
   );
 }
@@ -1046,6 +1067,140 @@ function TopBar({ page, selectedArea, onSearch }: {
   );
 }
 
+// ─── Supabase Modal ───────────────────────────────────────────────────────────
+function SupabaseModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
+  const config = getSupabaseConfig();
+  const [url, setUrl] = useState(config.url);
+  const [key, setKey] = useState(config.key);
+  const [copied, setCopied] = useState(false);
+  const [showSql, setShowSql] = useState(false);
+
+  const handleSave = () => {
+    localStorage.setItem("supabase_url", url.trim());
+    localStorage.setItem("supabase_anon_key", key.trim());
+    onSave();
+    onClose();
+  };
+
+  const handleClear = () => {
+    localStorage.removeItem("supabase_url");
+    localStorage.removeItem("supabase_anon_key");
+    setUrl("");
+    setKey("");
+    onSave();
+    onClose();
+    window.location.reload();
+  };
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm pt-[10vh] overflow-y-auto pb-10"
+      onClick={onClose}>
+      <div className="w-full max-w-xl mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Database className="w-5 h-5 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">Conectar com o Supabase</h2>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="text-xs text-muted-foreground leading-relaxed">
+            Configure suas credenciais do Supabase para persistir seus estudos e progresso no banco de dados. Se deixado em branco, a aplicação continuará usando dados simulados na memória.
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Supabase Project URL</label>
+              <div className="flex items-center gap-2 bg-input-background border border-border rounded-lg px-3 py-2">
+                <Server className="w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="https://xxxxxx.supabase.co"
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Supabase Anon API Key</label>
+              <div className="flex items-center gap-2 bg-input-background border border-border rounded-lg px-3 py-2">
+                <Key className="w-4 h-4 text-muted-foreground" />
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOi..."
+                  value={key}
+                  onChange={e => setKey(e.target.value)}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={handleSave}
+              disabled={!url.trim() || !key.trim()}
+              className="flex-1 py-2 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors text-center"
+            >
+              Salvar e Conectar
+            </button>
+            {(config.url || config.key) && (
+              <button
+                onClick={handleClear}
+                className="py-2 px-4 rounded-lg border border-border text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                Limpar Conexão
+              </button>
+            )}
+          </div>
+
+          <div className="border-t border-border/60 pt-4">
+            <button
+              onClick={() => setShowSql(v => !v)}
+              className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>📋 Como configurar o Banco de Dados (SQL Script)</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSql ? "rotate-180" : ""}`} />
+            </button>
+
+            {showSql && (
+              <div className="mt-3 space-y-2">
+                <div className="text-[11px] text-muted-foreground leading-normal">
+                  Copie o script abaixo, abra o console do Supabase, vá em <strong>SQL Editor</strong>, clique em <strong>New Query</strong>, cole o código e execute clicando em <strong>Run</strong>.
+                </div>
+                <div className="relative">
+                  <pre className="bg-muted text-[10px] p-3 rounded-lg overflow-x-auto max-h-48 text-muted-foreground font-mono leading-relaxed border border-border">
+                    {SUPABASE_SQL_SETUP}
+                  </pre>
+                  <button
+                    onClick={handleCopySql}
+                    className="absolute top-2 right-2 p-1.5 rounded bg-card border border-border hover:bg-white/5 transition-colors text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    {copied ? "Copiado!" : "Copiar"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [areas, setAreas] = useState<Area[]>(INITIAL_AREAS);
@@ -1054,6 +1209,79 @@ export default function App() {
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false);
+  const [supabaseLoading, setSupabaseLoading] = useState(false);
+  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
+
+  const syncDataFromSupabase = async () => {
+    const client = getSupabaseClient();
+    if (!client) {
+      setSupabaseConfigured(false);
+      return;
+    }
+    setSupabaseConfigured(true);
+    setSupabaseLoading(true);
+
+    try {
+      // 1. Fetch progress
+      const { data: progressData, error: progressError } = await client
+        .from("subtopic_progress")
+        .select("*");
+
+      if (progressError) throw progressError;
+
+      if (progressData && progressData.length > 0) {
+        const progressMap = new Map(progressData.map(p => [p.subtopic_id, p]));
+        setAreas(prev => prev.map(area => ({
+          ...area,
+          topics: area.topics.map(topic => ({
+            ...topic,
+            subtopics: topic.subtopics.map(subtopic => {
+              const saved = progressMap.get(subtopic.id);
+              if (saved) {
+                return {
+                  ...subtopic,
+                  status: saved.status as Status,
+                  mastery: saved.mastery,
+                  lastReview: saved.last_review,
+                  nextReview: saved.next_review
+                };
+              }
+              return subtopic;
+            })
+          }))
+        })));
+      }
+
+      // 2. Fetch sessions
+      const { data: sessionsData, error: sessionsError } = await client
+        .from("study_sessions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (sessionsError) throw sessionsError;
+
+      if (sessionsData && sessionsData.length > 0) {
+        setSessions(sessionsData.map((s: any) => ({
+          id: s.id,
+          date: s.date,
+          duration: s.duration,
+          areaId: s.area_id,
+          topicName: s.topic_name,
+          notes: s.notes || ""
+        })));
+      }
+    } catch (err) {
+      console.error("Erro ao sincronizar com o Supabase:", err);
+    } finally {
+      setSupabaseLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    syncDataFromSupabase();
+  }, []);
 
   // Cmd+K to open search
   useEffect(() => {
@@ -1074,10 +1302,52 @@ export default function App() {
         ...area,
         topics: area.topics.map(topic => ({
           ...topic,
-          subtopics: topic.subtopics.map(s => s.id === subId ? { ...s, ...changes } : s),
+          subtopics: topic.subtopics.map(s => {
+            if (s.id === subId) {
+              const updated = { ...s, ...changes };
+              
+              // Sync to Supabase in the background
+              const client = getSupabaseClient();
+              if (client) {
+                client.from("subtopic_progress").upsert({
+                  subtopic_id: subId,
+                  status: updated.status,
+                  mastery: updated.mastery,
+                  last_review: updated.lastReview,
+                  next_review: updated.nextReview
+                }).then(({ error }) => {
+                  if (error) console.error("Erro ao salvar progresso no Supabase:", error);
+                });
+              }
+              return updated;
+            }
+            return s;
+          }),
         })),
       };
     }));
+  };
+
+  const handleAddSession = async (newSession: Session) => {
+    setSessions(prev => [newSession, ...prev]);
+
+    // Sync to Supabase in the background
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        const { error } = await client.from("study_sessions").insert({
+          id: newSession.id,
+          date: newSession.date,
+          duration: newSession.duration,
+          area_id: newSession.areaId,
+          topic_name: newSession.topicName,
+          notes: newSession.notes
+        });
+        if (error) throw error;
+      } catch (error) {
+        console.error("Erro ao salvar sessão no Supabase:", error);
+      }
+    }
   };
 
   const handleSelectArea = (id: string) => {
@@ -1101,6 +1371,8 @@ export default function App() {
         onSelectArea={handleSelectArea}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(v => !v)}
+        supabaseConfigured={supabaseConfigured}
+        onOpenSupabaseSettings={() => setShowSupabaseModal(true)}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar page={page} selectedArea={selectedArea} onSearch={() => setSearchOpen(true)} />
@@ -1115,13 +1387,17 @@ export default function App() {
             <AnalyticsPage areas={areas} sessions={sessions} />
           )}
           {page === "sessions" && (
-            <SessionsPage areas={areas} sessions={sessions} onAdd={s => setSessions(prev => [s, ...prev])} />
+            <SessionsPage areas={areas} sessions={sessions} onAdd={handleAddSession} />
           )}
         </main>
       </div>
 
       {searchOpen && (
         <SearchModal areas={areas} onClose={() => setSearchOpen(false)} onSelectArea={handleSelectArea} />
+      )}
+
+      {showSupabaseModal && (
+        <SupabaseModal onClose={() => setShowSupabaseModal(false)} onSave={syncDataFromSupabase} />
       )}
     </div>
   );
