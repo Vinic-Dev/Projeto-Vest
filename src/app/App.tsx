@@ -194,8 +194,8 @@ const INITIAL_SESSIONS: Session[] = [
   { id: "s20", date: dStr(-30), duration: 90,  areaId: "hum", topicName: "Ditadura militar",         notes: "AI-5, anos de chumbo, abertura política" },
 ];
 
-const ENEM_DATE = new Date("2026-11-03");
-const DAYS_TO_ENEM = Math.ceil((ENEM_DATE.getTime() - TODAY.getTime()) / 86400000);
+const VEST_DATE = new Date("2026-11-03");
+const DAYS_TO_VEST = Math.ceil((VEST_DATE.getTime() - TODAY.getTime()) / 86400000);
 
 // ─── Calc helpers ─────────────────────────────────────────────────────────────
 function calcProgress(area: Area): number {
@@ -340,7 +340,7 @@ function SearchModal({ areas, onClose, onSelectArea }: {
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
           <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          <input ref={inputRef} type="text" placeholder="Buscar tópicos e subtópicos do ENEM..."
+          <input ref={inputRef} type="text" placeholder="Buscar tópicos e subtópicos..."
             value={q} onChange={e => setQ(e.target.value)}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none" />
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -371,7 +371,7 @@ function SearchModal({ areas, onClose, onSelectArea }: {
         )}
         {!q && (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Digite para buscar qualquer conteúdo do ENEM/UFG
+            Digite para buscar qualquer conteúdo do vestibular
           </div>
         )}
       </div>
@@ -409,8 +409,8 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-foreground leading-none">StudyENEM</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5 leading-none">{DAYS_TO_ENEM}d para o ENEM</div>
+            <div className="text-sm font-semibold text-foreground leading-none">Study Vestibular</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5 leading-none">{DAYS_TO_VEST}d para o vestibular</div>
           </div>
         )}
         <button onClick={onToggle} className="ml-auto text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
@@ -507,7 +507,7 @@ function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName }: 
           <div className="text-xs text-muted-foreground mb-1 uppercase tracking-widest">Bem-vindo(a) de volta</div>
           <h1 className="text-2xl font-semibold text-foreground">{userName}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            <span className="text-primary font-medium">{DAYS_TO_ENEM}</span> dias para o ENEM 2026 · Você está no caminho certo!
+            <span className="text-primary font-medium">{DAYS_TO_VEST}</span> dias para o vestibular · Você está no caminho certo!
           </p>
         </div>
         <div className="hidden md:flex items-center gap-3">
@@ -552,10 +552,10 @@ function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName }: 
           <div className="text-sm font-medium text-foreground mb-4">Visão Geral por Área</div>
           <ResponsiveContainer width="100%" height={220}>
             <RadarChart data={radarData}>
-              <PolarGrid gridType="polygon" stroke="rgba(255,255,255,0.06)" />
-              <PolarAngleAxis dataKey="area" tick={{ fill: "#5b6a8a", fontSize: 11, fontFamily: "Lexend" }} />
+              <PolarGrid gridType="polygon" stroke="rgba(0,0,0,0.06)" />
+              <PolarAngleAxis dataKey="area" tick={{ fill: "#6b7a94", fontSize: 11, fontFamily: "Lexend" }} />
               <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-              <Radar dataKey="value" fill="rgba(52,211,153,0.12)" stroke="#34d399" strokeWidth={2} dot={{ fill: "#34d399", r: 3 }} />
+              <Radar dataKey="value" fill="rgba(16,185,129,0.12)" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
@@ -564,14 +564,14 @@ function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName }: 
           <div className="text-sm font-medium text-foreground mb-4">Horas de Estudo por Dia da Semana</div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={weeklyData} barSize={24}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="day" tick={{ fill: "#5b6a8a", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#5b6a8a", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} unit="h" />
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(0,0,0,0.05)" vertical={false} />
+              <XAxis dataKey="day" tick={{ fill: "#6b7a94", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#6b7a94", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} unit="h" />
               <Tooltip
-                contentStyle={{ background: "#0d1425", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: "#dde5f4" }}
-                cursor={{ fill: "rgba(255,255,255,0.04)" }} />
-              <Bar dataKey="minutos" name="horas" fill="#34d399" radius={[4, 4, 0, 0]} />
+                contentStyle={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: "#1a1e2e" }}
+                cursor={{ fill: "rgba(0,0,0,0.03)" }} />
+              <Bar dataKey="minutos" name="horas" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1054,7 +1054,7 @@ function TopBar({ page, selectedArea, onSearch, userInitials }: {
 
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-white/3 text-xs text-muted-foreground">
         <Zap className="w-3.5 h-3.5 text-yellow-400" />
-        <span className="hidden sm:inline">{DAYS_TO_ENEM}d para o ENEM</span>
+        <span className="hidden sm:inline">{DAYS_TO_VEST}d para o vestibular</span>
       </div>
 
       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 border border-white/10 flex items-center justify-center text-xs font-semibold text-foreground">
