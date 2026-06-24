@@ -23,6 +23,13 @@ const TODAY = new Date();
 const todayStr = TODAY.toISOString().split("T")[0];
 const dStr = (offset: number) => new Date(TODAY.getTime() + offset * 86400000).toISOString().split("T")[0];
 
+const formatDateBr = (d: string) => {
+  if (!d) return "";
+  const parts = d.split("-");
+  if (parts.length !== 3) return d;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
 const INITIAL_SESSIONS: Session[] = [];
 
 // ─── Calc helpers ─────────────────────────────────────────────────────────────
@@ -495,7 +502,7 @@ function AreaPage({ area, onUpdate }: {
                       onChange={n => onUpdate(area.id, s.id, { mastery: n })} />
                     <div className="hidden md:block text-xs font-medium text-muted-foreground text-right w-20"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                      {s.nextReview ? s.nextReview : "—"}
+                      {s.nextReview ? formatDateBr(s.nextReview) : "—"}
                     </div>
                   </div>
                 ))}
@@ -544,7 +551,7 @@ function StudyHeatmap({ sessions }: { sessions: Session[] }) {
           {week.map((cell, di) => (
             <div key={di} className="w-3 h-3 rounded-sm"
               style={{ background: cell ? getColor(cell.minutes) : "transparent" }}
-              title={cell ? `${cell.date}: ${cell.minutes}min` : ""} />
+              title={cell ? `${formatDateBr(cell.date)}: ${cell.minutes}min` : ""} />
           ))}
         </div>
       ))}
@@ -612,12 +619,13 @@ function AnalyticsSection({ areas, sessions }: { areas: Area[]; sessions: Sessio
           <div className="text-sm font-medium text-foreground mb-4">Progresso por Área</div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={areaBarData} layout="vertical" barSize={20}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-              <XAxis type="number" domain={[0, 100]} tick={{ fill: "#5b6a8a", fontSize: 11 }} axisLine={false} tickLine={false} unit="%" />
-              <YAxis type="category" dataKey="name" tick={{ fill: "#dde5f4", fontSize: 12, fontFamily: "Lexend" }} axisLine={false} tickLine={false} width={40} />
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(0,0,0,0.05)" horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} tick={{ fill: "#6b7a94", fontSize: 11 }} axisLine={false} tickLine={false} unit="%" />
+              <YAxis type="category" dataKey="name" tick={{ fill: "#1a1e2e", fontSize: 12, fontFamily: "Lexend" }} axisLine={false} tickLine={false} width={40} />
               <Tooltip
-                contentStyle={{ background: "#0d1425", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
-                cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                contentStyle={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: "#1a1e2e" }}
+                cursor={{ fill: "rgba(0,0,0,0.03)" }} />
               <Bar dataKey="progress" name="Progresso" radius={[0, 4, 4, 0]}>
                 {areaBarData.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
@@ -773,7 +781,7 @@ function SessionsSection({ areas, sessions, onAdd }: {
                   <div className="text-[11px] text-muted-foreground truncate">{area?.name}{s.notes ? ` · ${s.notes}` : ""}</div>
                 </div>
                 <div className="hidden sm:block text-[11px] text-muted-foreground whitespace-nowrap"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.date}</div>
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatDateBr(s.date)}</div>
                 <div className="text-xs font-medium text-muted-foreground whitespace-nowrap"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.duration}min</div>
               </div>
