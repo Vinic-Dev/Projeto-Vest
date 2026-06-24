@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eu Te Amo</title>
+    <!-- Fonte elegante do Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #1a0b12; /* Fundo escuro e elegante */
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        /* Container do Canvas para as partículas */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Para não bloquear o clique no cartão */
+            z-index: 10;
+        }
+
+        /* Container do Cartão com Perspectiva 3D */
+        .card-container {
+            perspective: 1200px;
+            z-index: 20;
+            cursor: pointer;
+            /* Evita que o cartão fique muito grande em ecrãs pequenos */
+            max-width: 90vw; 
+        }
+
+        .card {
+            width: 320px;
+            height: 450px;
+            max-width: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-radius: 15px;
+        }
+
+        /* Classe que vira o cartão */
+        .card.open {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-inside {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        /* Frente do Cartão */
+        .card-front {
+            background: linear-gradient(135deg, #c9184a, #590d22);
+            color: #ffb5a7;
+            border: 2px solid #ff758f;
+        }
+
+        .card-front .icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        .card-front h2 {
+            font-family: 'Dancing Script', cursive;
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+        }
+
+        .card-front p {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            opacity: 0.8;
+            font-weight: 300;
+        }
+
+        /* Interior do Cartão */
+        .card-inside {
+            background: #fff0f3;
+            color: #590d22;
+            transform: rotateY(180deg);
+            border: 2px solid #ffb5a7;
+        }
+
+        .card-inside h1 {
+            font-family: 'Dancing Script', cursive;
+            font-size: 4rem;
+            color: #c9184a;
+            margin-bottom: 15px;
+            line-height: 1;
+        }
+
+        .card-inside p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #800f2f;
+            font-weight: 400;
+        }
+
+        /* Animação de pulso na frente */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Ajustes para dispositivos móveis */
+        @media (max-width: 400px) {
+            .card {
+                height: 400px;
+            }
+            .card-inside h1 {
+                font-size: 3.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas-container"></canvas>
+
+    <div class="card-container" onclick="openCard()">
+        <div class="card" id="myCard">
+            <!-- Capa do Cartão -->
+            <div class="card-front">
+                <div class="icon">💌</div>
+                <h2>Para Você</h2>
+                <p>Toque para abrir</p>
+            </div>
+            
+            <!-- Interior do Cartão -->
+            <div class="card-inside">
+                <h1>Eu te amo</h1>
+                <p>Hoje, amanhã e por todos os dias da minha vida.<br>❤️</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas-container');
+        const ctx = canvas.getContext('2d');
+        let hearts = [];
+        let isOpened = false;
+
+        // Ajusta o tamanho do canvas para o ecrã todo
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Classe que define cada coração (partícula)
+        class Heart {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                // Tamanho aleatório
+                this.size = Math.random() * 15 + 10;
+                
+                // Explosão inicial (direção e velocidade aleatórias)
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 15 + 5;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                
+                // Rotação no próprio eixo
+                this.rotation = Math.random() * 360;
+                this.rotationSpeed = (Math.random() - 0.5) * 5;
+                
+                // Cor do coração (tons de rosa e vermelho)
+                this.color = `hsl(${Math.random() * 30 + 330}, 100%, 60%)`;
+                this.wobble = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                // Aplica a velocidade à posição
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Atualiza a rotação contínua
+                this.rotation += this.rotationSpeed;
+
+                // Fricção para desacelerar a explosão inicial
+                this.vx *= 0.92;
+                this.vy *= 0.92;
+
+                // Após a explosão, eles começam a flutuar para cima e balançar
+                this.y -= 1.5; 
+                this.wobble += 0.05;
+                this.x += Math.sin(this.wobble) * 1.5;
+
+                // Se sair do ecrã por cima, volta por baixo para o efeito durar para sempre
+                if (this.y < -50) {
+                    this.y = canvas.height + 50;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.fillStyle = this.color;
+                
+                // Desenha o formato do coração
+                ctx.beginPath();
+                const s = this.size / 20; // Fator de escala
+                ctx.moveTo(0, 5 * s);
+                ctx.bezierCurveTo(-10 * s, -10 * s, -25 * s, 5 * s, 0, 22 * s);
+                ctx.bezierCurveTo(25 * s, 5 * s, 10 * s, -10 * s, 0, 5 * s);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // Função chamada ao clicar no cartão
+        function openCard() {
+            const card = document.getElementById('myCard');
+            
+            if (!isOpened) {
+                card.classList.add('open');
+                isOpened = true;
+                
+                // Cria a explosão de 150 corações a sair do centro
+                // Usa a posição do cartão para centralizar a explosão
+                const rect = card.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                for (let i = 0; i < 150; i++) {
+                    hearts.push(new Heart(centerX, centerY));
+                }
+            } else {
+                // Fecha ao clicar novamente
+                card.classList.remove('open');
+                isOpened = false;
+                hearts = []; // Limpa os corações
+            }
+        }
+
+        // Loop de animação
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < hearts.length; i++) {
+                hearts[i].update();
+                hearts[i].draw();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Inicia o loop
+        animate();
+    </script>
+</body>
+</html>
