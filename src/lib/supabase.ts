@@ -65,7 +65,7 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
 export async function getUserProfile(userId: string) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('full_name')
+    .select('full_name, custom_areas')
     .eq('id', userId)
     .single();
   if (error) return null;

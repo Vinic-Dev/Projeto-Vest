@@ -4,7 +4,7 @@ import {
   BarChart3, Clock, Target, Search, ChevronDown, ChevronRight,
   Star, X, Menu, TrendingUp, Calendar, Zap, Award,
   Plus, AlertCircle, RotateCcw, Flame, Check, GraduationCap, Brain,
-  LogOut,
+  LogOut, Settings
 } from "lucide-react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -13,6 +13,7 @@ import {
 import { supabase, signOut, onAuthStateChange, getUserProfile } from "../lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import LoginPage from "./components/LoginPage";
+import ManageAreasPage from "./components/ManageAreasPage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Status, Page, Subtopic, Topic, Area, Session } from "./types";
@@ -277,6 +278,9 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
           );
         })}
 
+        <div className="mt-4 border-t border-border pt-4">
+          {navItem("manage", Settings, "Gerenciar Matérias")}
+        </div>
 
       </nav>
 
@@ -860,13 +864,35 @@ export default function App() {
         // Try profile table first, then user_metadata
         const profile = await getUserProfile(authUser.id);
         setUserName(profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Estudante");
+        if (profile?.custom_areas) {
+          setAreas(profile.custom_areas);
+        } else {
+          setAreas(INITIAL_AREAS);
+        }
       } else {
         setUserName("");
+        setAreas(INITIAL_AREAS);
       }
       setAuthLoading(false);
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleSaveAreasConfig = async (newAreas: Area[]) => {
+    setAreas(newAreas);
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ custom_areas: newAreas })
+        .eq('id', user.id);
+      if (error) throw error;
+      alert("Configurações salvas com sucesso!");
+    } catch (err) {
+      console.error("Erro ao salvar configuração de matérias:", err);
+      alert("Erro ao salvar as configurações no banco de dados.");
+    }
+  };
 
   // ─── Sync Data from Supabase (user-scoped) ─────────────────
   const syncDataFromSupabase = useCallback(async () => {
@@ -1070,6 +1096,9 @@ export default function App() {
           )}
           {page === "area" && selectedArea && (
             <AreaPage area={selectedArea} onUpdate={handleUpdate} />
+          )}
+          {page === "manage" && (
+            <ManageAreasPage areas={areas} onSave={handleSaveAreasConfig} />
           )}
         </main>
       </div>

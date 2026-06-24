@@ -1,5 +1,5 @@
 export type Status = "not_started" | "learning" | "practicing" | "mastered" | "revision_needed";
-export type Page = "dashboard" | "area";
+export type Page = "dashboard" | "area" | "manage";
 
 export interface Subtopic {
   id: string;
