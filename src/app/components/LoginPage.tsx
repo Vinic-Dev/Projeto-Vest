@@ -85,7 +85,7 @@ export default function LoginPage({ onAuth }: { onAuth: () => void }) {
                 <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <input
                   type="text"
-                  placeholder="joaopedro ou vinicius"
+                  placeholder="usuario"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
