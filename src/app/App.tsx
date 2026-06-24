@@ -1,0 +1,1128 @@
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import {
+  LayoutDashboard, BookOpen, FlaskConical, Globe, Calculator,
+  BarChart3, Clock, Target, Search, ChevronDown, ChevronRight,
+  Star, X, Menu, TrendingUp, Calendar, Zap, Award,
+  Plus, AlertCircle, RotateCcw, Flame, Check, GraduationCap, Brain,
+} from "lucide-react";
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
+} from "recharts";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Status = "not_started" | "learning" | "practicing" | "mastered" | "revision_needed";
+type Page = "dashboard" | "area" | "analytics" | "sessions";
+
+interface Subtopic { id: string; name: string; status: Status; mastery: number; lastReview: string | null; nextReview: string | null; }
+interface Topic { id: string; name: string; subtopics: Subtopic[]; }
+interface Area { id: string; name: string; short: string; color: string; topics: Topic[]; }
+interface Session { id: string; date: string; duration: number; areaId: string; topicName: string; notes: string; }
+
+// ─── Status Config ────────────────────────────────────────────────────────────
+const STATUS_CFG: Record<Status, { label: string; color: string; bg: string }> = {
+  not_started:     { label: "Não iniciado", color: "#4b5d7a", bg: "rgba(75,93,122,0.15)" },
+  learning:        { label: "Aprendendo",   color: "#60a5fa", bg: "rgba(96,165,250,0.15)" },
+  practicing:      { label: "Praticando",   color: "#fbbf24", bg: "rgba(251,191,36,0.15)" },
+  mastered:        { label: "Dominado",     color: "#34d399", bg: "rgba(52,211,153,0.15)" },
+  revision_needed: { label: "Revisar",      color: "#f87171", bg: "rgba(248,113,113,0.15)" },
+};
+const STATUS_CYCLE: Status[] = ["not_started", "learning", "practicing", "mastered", "revision_needed"];
+
+// ─── Data helpers ─────────────────────────────────────────────────────────────
+const TODAY = new Date();
+const todayStr = TODAY.toISOString().split("T")[0];
+const dStr = (offset: number) => new Date(TODAY.getTime() + offset * 86400000).toISOString().split("T")[0];
+
+const sub = (id: string, name: string, status: Status, mastery: number, lastDaysAgo?: number, nextDaysFrom?: number): Subtopic => ({
+  id, name, status, mastery,
+  lastReview: lastDaysAgo != null ? dStr(-lastDaysAgo) : null,
+  nextReview: nextDaysFrom != null ? dStr(nextDaysFrom) : null,
+});
+
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+const INITIAL_AREAS: Area[] = [
+  {
+    id: "mat", name: "Matemática", short: "MAT", color: "#60a5fa",
+    topics: [
+      { id: "mat-fun", name: "Funções", subtopics: [
+        sub("mat-f1", "Função do 1º grau",    "mastered",        5, 3,  14),
+        sub("mat-f2", "Função do 2º grau",    "mastered",        4, 5,  10),
+        sub("mat-f3", "Função exponencial",   "practicing",      3, 7,   3),
+        sub("mat-f4", "Função logarítmica",   "practicing",      3, 8,   5),
+        sub("mat-f5", "Função modular",       "learning",        2, 12,  2),
+      ]},
+      { id: "mat-geo", name: "Geometria", subtopics: [
+        sub("mat-g1", "Geometria plana",       "mastered",    5, 2, 21),
+        sub("mat-g2", "Geometria espacial",    "practicing",  3, 6,  4),
+        sub("mat-g3", "Trigonometria",         "learning",    2, 14, 1),
+        sub("mat-g4", "Geometria analítica",   "not_started", 1),
+      ]},
+      { id: "mat-prob", name: "Combinatória e Probabilidade", subtopics: [
+        sub("mat-p1", "Análise combinatória",      "practicing",  3, 9,  6),
+        sub("mat-p2", "Probabilidade",             "learning",    2, 15, 2),
+        sub("mat-p3", "Estatística descritiva",    "not_started", 1),
+        sub("mat-p4", "Distribuição de frequência","not_started", 1),
+      ]},
+      { id: "mat-alg", name: "Álgebra e Números", subtopics: [
+        sub("mat-a1", "Progressão aritmética",  "mastered",        4, 4,  18),
+        sub("mat-a2", "Progressão geométrica",  "mastered",        4, 5,  14),
+        sub("mat-a3", "Matrizes",               "revision_needed", 2, 20,  0),
+        sub("mat-a4", "Determinantes",          "revision_needed", 2, 22,  0),
+        sub("mat-a5", "Sistemas lineares",      "practicing",      3, 10,  5),
+      ]},
+    ],
+  },
+  {
+    id: "lin", name: "Linguagens", short: "LIN", color: "#4ade80",
+    topics: [
+      { id: "lin-por", name: "Língua Portuguesa", subtopics: [
+        sub("lin-p1", "Interpretação de texto", "mastered",   5, 1, 21),
+        sub("lin-p2", "Coesão e coerência",      "mastered",   4, 3, 14),
+        sub("lin-p3", "Gramática normativa",     "practicing", 3, 8,  4),
+        sub("lin-p4", "Variação linguística",    "mastered",   4, 6, 21),
+        sub("lin-p5", "Figuras de linguagem",    "learning",   3, 11, 2),
+      ]},
+      { id: "lin-lit", name: "Literatura", subtopics: [
+        sub("lin-l1", "Modernismo brasileiro",    "practicing",  3, 10, 5),
+        sub("lin-l2", "Realismo e Naturalismo",   "learning",    2, 18, 1),
+        sub("lin-l3", "Romantismo",               "practicing",  3, 13, 6),
+        sub("lin-l4", "Pré-modernismo",           "not_started", 1),
+        sub("lin-l5", "Barroco e Quinhentismo",   "not_started", 1),
+      ]},
+      { id: "lin-red", name: "Redação", subtopics: [
+        sub("lin-r1", "Estrutura dissertativa",   "mastered",   5, 2, 21),
+        sub("lin-r2", "Proposta de intervenção",  "mastered",   4, 4, 14),
+        sub("lin-r3", "Argumentação e repertório","practicing", 4, 7,  7),
+        sub("lin-r4", "Coerência temática",       "mastered",   5, 3, 21),
+      ]},
+      { id: "lin-ing", name: "Inglês", subtopics: [
+        sub("lin-i1", "Reading comprehension", "practicing", 3, 9,  5),
+        sub("lin-i2", "Vocabulary in context",  "learning",   2, 14, 2),
+        sub("lin-i3", "False cognates",         "mastered",   4, 7, 21),
+      ]},
+    ],
+  },
+  {
+    id: "nat", name: "Ciências da Natureza", short: "NAT", color: "#22d3ee",
+    topics: [
+      { id: "nat-fis", name: "Física", subtopics: [
+        sub("nat-f1", "Cinemática",               "mastered",    4, 5, 14),
+        sub("nat-f2", "Dinâmica e Leis de Newton","mastered",    4, 6, 14),
+        sub("nat-f3", "Energia e trabalho",        "practicing",  3, 9,  5),
+        sub("nat-f4", "Termodinâmica",             "learning",    2, 16, 1),
+        sub("nat-f5", "Eletromagnetismo",          "not_started", 1),
+        sub("nat-f6", "Óptica e ondulatória",      "not_started", 1),
+      ]},
+      { id: "nat-qui", name: "Química", subtopics: [
+        sub("nat-q1", "Tabela periódica e ligações", "mastered",        4, 4,  18),
+        sub("nat-q2", "Reações químicas",            "practicing",      3, 8,   5),
+        sub("nat-q3", "Estequiometria",              "revision_needed", 2, 25,  0),
+        sub("nat-q4", "Soluções e concentrações",    "learning",        2, 13,  2),
+        sub("nat-q5", "Química orgânica – funções",  "not_started",     1),
+        sub("nat-q6", "Polímeros e combustíveis",    "not_started",     1),
+      ]},
+      { id: "nat-bio", name: "Biologia", subtopics: [
+        sub("nat-b1", "Citologia e bioquímica",  "practicing",      3, 7,  6),
+        sub("nat-b2", "Genética mendeliana",      "revision_needed", 2, 28, 0),
+        sub("nat-b3", "Genética molecular",       "not_started",     1),
+        sub("nat-b4", "Ecologia",                 "learning",        2, 17, 1),
+        sub("nat-b5", "Evolução",                 "not_started",     1),
+        sub("nat-b6", "Fisiologia humana",        "learning",        2, 15, 3),
+      ]},
+    ],
+  },
+  {
+    id: "hum", name: "Ciências Humanas", short: "HUM", color: "#a78bfa",
+    topics: [
+      { id: "hum-bra", name: "História do Brasil", subtopics: [
+        sub("hum-b1", "Brasil Colônia",        "mastered",    4, 4, 21),
+        sub("hum-b2", "Brasil Império",        "mastered",    4, 6, 21),
+        sub("hum-b3", "República Velha",       "practicing",  3, 10, 7),
+        sub("hum-b4", "Era Vargas",            "practicing",  3, 11, 7),
+        sub("hum-b5", "Ditadura militar",      "learning",    2, 18, 2),
+        sub("hum-b6", "Redemocratização",      "not_started", 1),
+      ]},
+      { id: "hum-ger", name: "História Geral", subtopics: [
+        sub("hum-g1", "Revoluções burguesas",      "mastered",   5, 3,  21),
+        sub("hum-g2", "Imperialismo e 1ª Guerra",  "mastered",   4, 7,  14),
+        sub("hum-g3", "2ª Guerra e Guerra Fria",   "practicing", 4, 9,   8),
+        sub("hum-g4", "Descolonização",            "learning",   2, 15,  2),
+      ]},
+      { id: "hum-geo", name: "Geografia", subtopics: [
+        sub("hum-e1", "Geopolítica mundial",       "practicing", 3, 8,  5),
+        sub("hum-e2", "Urbanização e indústria",   "mastered",   4, 5, 14),
+        sub("hum-e3", "Questões ambientais",       "practicing", 3, 10, 6),
+        sub("hum-e4", "Geopolítica do Brasil",     "learning",   2, 16, 2),
+        sub("hum-e5", "Cartografia",               "mastered",   5, 3,  28),
+      ]},
+      { id: "hum-fil", name: "Filosofia e Sociologia", subtopics: [
+        sub("hum-i1", "Ética e moral",            "practicing",  3, 9,  6),
+        sub("hum-i2", "Filosofia política",        "learning",    2, 14, 2),
+        sub("hum-i3", "Sociologia clássica",       "practicing",  3, 11, 7),
+        sub("hum-i4", "Temas contemporâneos",      "not_started", 1),
+      ]},
+    ],
+  },
+];
+
+const INITIAL_SESSIONS: Session[] = [
+  { id: "s0",  date: dStr(0),   duration: 45,  areaId: "mat", topicName: "Função logarítmica",       notes: "Praticando com questões do ENEM 2024" },
+  { id: "s1",  date: dStr(-1),  duration: 90,  areaId: "mat", topicName: "Trigonometria",             notes: "Seno, cosseno e relações fundamentais" },
+  { id: "s2",  date: dStr(-1),  duration: 60,  areaId: "lin", topicName: "Interpretação de texto",   notes: "Textos dissertativos e argumentativos" },
+  { id: "s3",  date: dStr(-2),  duration: 120, areaId: "nat", topicName: "Cinemática",               notes: "Movimento retilíneo uniformemente variado" },
+  { id: "s4",  date: dStr(-3),  duration: 75,  areaId: "hum", topicName: "Revoluções burguesas",     notes: "Resumo detalhado da Revolução Francesa" },
+  { id: "s5",  date: dStr(-4),  duration: 90,  areaId: "mat", topicName: "Geometria espacial",       notes: "Prismas, pirâmides e cones" },
+  { id: "s6",  date: dStr(-5),  duration: 60,  areaId: "lin", topicName: "Redação ENEM",             notes: "Duas redações completas com repertório" },
+  { id: "s7",  date: dStr(-6),  duration: 105, areaId: "nat", topicName: "Dinâmica e Newton",        notes: "3ª lei ainda confusa, precisa reforço" },
+  { id: "s8",  date: dStr(-8),  duration: 90,  areaId: "hum", topicName: "Geopolítica mundial",      notes: "Conflitos no Oriente Médio e Ucrânia" },
+  { id: "s9",  date: dStr(-9),  duration: 120, areaId: "mat", topicName: "Matrizes e Determinantes", notes: "Revisão urgente – errei 60% das questões" },
+  { id: "s10", date: dStr(-10), duration: 60,  areaId: "lin", topicName: "Modernismo brasileiro",    notes: "Carlos Drummond e Clarice Lispector" },
+  { id: "s11", date: dStr(-12), duration: 90,  areaId: "nat", topicName: "Reações químicas",         notes: "Balanceamento e tipos de reação" },
+  { id: "s12", date: dStr(-14), duration: 75,  areaId: "hum", topicName: "Era Vargas",               notes: "Estado Novo e industrialização brasileira" },
+  { id: "s13", date: dStr(-15), duration: 120, areaId: "mat", topicName: "Probabilidade",            notes: "Eventos independentes e dependentes" },
+  { id: "s14", date: dStr(-16), duration: 60,  areaId: "lin", topicName: "Gramática normativa",      notes: "Concordância verbal e nominal" },
+  { id: "s15", date: dStr(-18), duration: 90,  areaId: "nat", topicName: "Genética mendeliana",      notes: "Leis de Mendel e heredograma" },
+  { id: "s16", date: dStr(-20), duration: 105, areaId: "hum", topicName: "2ª Guerra e Guerra Fria",  notes: "Causas, desenvolvimento e consequências" },
+  { id: "s17", date: dStr(-22), duration: 60,  areaId: "mat", topicName: "Sistemas lineares",        notes: "Método de substituição e Cramer" },
+  { id: "s18", date: dStr(-25), duration: 90,  areaId: "lin", topicName: "Realismo e Naturalismo",   notes: "Machado de Assis – Dom Casmurro" },
+  { id: "s19", date: dStr(-27), duration: 120, areaId: "nat", topicName: "Termodinâmica",            notes: "Primeira e segunda lei da termodinâmica" },
+  { id: "s20", date: dStr(-30), duration: 90,  areaId: "hum", topicName: "Ditadura militar",         notes: "AI-5, anos de chumbo, abertura política" },
+];
+
+const ENEM_DATE = new Date("2026-11-03");
+const DAYS_TO_ENEM = Math.ceil((ENEM_DATE.getTime() - TODAY.getTime()) / 86400000);
+
+// ─── Calc helpers ─────────────────────────────────────────────────────────────
+function calcProgress(area: Area): number {
+  const all = area.topics.flatMap(t => t.subtopics);
+  if (!all.length) return 0;
+  const scored = all.reduce((acc, s) => {
+    if (s.status === "mastered") return acc + 1;
+    if (s.status === "practicing") return acc + 0.6;
+    if (s.status === "learning") return acc + 0.3;
+    if (s.status === "revision_needed") return acc + 0.35;
+    return acc;
+  }, 0);
+  return Math.round((scored / all.length) * 100);
+}
+
+function calcStreak(sessions: Session[]): number {
+  const studyDays = new Set(sessions.map(s => s.date));
+  let streak = 0;
+  let cursor = new Date(TODAY);
+  while (true) {
+    const key = cursor.toISOString().split("T")[0];
+    if (studyDays.has(key)) { streak++; cursor = new Date(cursor.getTime() - 86400000); }
+    else break;
+  }
+  return streak;
+}
+
+function getUpcomingReviews(areas: Area[]) {
+  const results: Array<Subtopic & { areaName: string; areaColor: string; daysLeft: number }> = [];
+  for (const area of areas) {
+    for (const topic of area.topics) {
+      for (const s of topic.subtopics) {
+        if (s.nextReview) {
+          const daysLeft = Math.ceil((new Date(s.nextReview).getTime() - new Date(todayStr).getTime()) / 86400000);
+          if (daysLeft <= 3) results.push({ ...s, areaName: area.name, areaColor: area.color, daysLeft });
+        }
+      }
+    }
+  }
+  return results.sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 8);
+}
+
+function getWeakTopics(areas: Area[]) {
+  const results: Array<Subtopic & { areaName: string; areaColor: string; topicName: string }> = [];
+  for (const area of areas) {
+    for (const topic of area.topics) {
+      for (const s of topic.subtopics) {
+        if (s.mastery <= 2 && s.status !== "not_started") {
+          results.push({ ...s, areaName: area.name, areaColor: area.color, topicName: topic.name });
+        }
+      }
+    }
+  }
+  return results.sort((a, b) => a.mastery - b.mastery).slice(0, 8);
+}
+
+// ─── Small components ─────────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: Status }) {
+  const cfg = STATUS_CFG[status];
+  return (
+    <span className="inline-flex items-center text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
+      style={{ color: cfg.color, background: cfg.bg }}>
+      {cfg.label}
+    </span>
+  );
+}
+
+function MasteryStars({ score, onChange }: { score: number; onChange?: (n: number) => void }) {
+  const colors = ["", "#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e"];
+  const activeColor = score >= 1 ? colors[score] : "#374151";
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map(n => (
+        <button key={n} onClick={() => onChange?.(n)}
+          className={`transition-transform ${onChange ? "hover:scale-125 cursor-pointer" : "cursor-default"}`}>
+          <Star className="w-3 h-3"
+            fill={n <= score ? activeColor : "transparent"}
+            stroke={n <= score ? activeColor : "#2a3552"}
+            strokeWidth={1.5} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ProgressBar({ value, color = "#34d399", height = 5 }: { value: number; color?: string; height?: number }) {
+  return (
+    <div className="w-full rounded-full overflow-hidden" style={{ height, background: "rgba(255,255,255,0.06)" }}>
+      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, background: color }} />
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, sub, color = "#34d399" }: {
+  icon: React.ElementType; label: string; value: string; sub?: string; color?: string;
+}) {
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ background: `${color}18` }}>
+        <Icon className="w-5 h-5" style={{ color }} />
+      </div>
+      <div>
+        <div className="text-xl font-semibold text-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+        {sub && <div className="text-[11px] text-muted-foreground/70 mt-0.5">{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Search Modal ─────────────────────────────────────────────────────────────
+function SearchModal({ areas, onClose, onSelectArea }: {
+  areas: Area[]; onClose: () => void; onSelectArea: (id: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const results = useMemo(() => {
+    if (!q.trim()) return [];
+    const lq = q.toLowerCase();
+    const out: Array<{ type: "topic" | "subtopic"; areaId: string; areaName: string; areaColor: string; name: string; extra?: string; status?: Status }> = [];
+    for (const area of areas) {
+      for (const topic of area.topics) {
+        if (topic.name.toLowerCase().includes(lq))
+          out.push({ type: "topic", areaId: area.id, areaName: area.name, areaColor: area.color, name: topic.name });
+        for (const s of topic.subtopics) {
+          if (s.name.toLowerCase().includes(lq))
+            out.push({ type: "subtopic", areaId: area.id, areaName: area.name, areaColor: area.color, name: s.name, extra: topic.name, status: s.status });
+        }
+      }
+    }
+    return out.slice(0, 10);
+  }, [q, areas]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm pt-[15vh]"
+      onClick={onClose}>
+      <div className="w-full max-w-xl mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
+          <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <input ref={inputRef} type="text" placeholder="Buscar tópicos e subtópicos do ENEM..."
+            value={q} onChange={e => setQ(e.target.value)}
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none" />
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {results.length > 0 && (
+          <div className="max-h-80 overflow-y-auto">
+            {results.map((r, i) => (
+              <button key={i} onClick={() => { onSelectArea(r.areaId); onClose(); }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: r.areaColor }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-foreground truncate">{r.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {r.areaName}{r.extra ? ` › ${r.extra}` : ""}
+                  </div>
+                </div>
+                {r.status && <StatusBadge status={r.status} />}
+              </button>
+            ))}
+          </div>
+        )}
+        {q && results.length === 0 && (
+          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+            Nenhum resultado para &ldquo;{q}&rdquo;
+          </div>
+        )}
+        {!q && (
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            Digite para buscar qualquer conteúdo do ENEM/UFG
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+const AREA_ICONS: Record<string, React.ElementType> = {
+  mat: Calculator, lin: BookOpen, nat: FlaskConical, hum: Globe,
+};
+
+function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectArea, collapsed, onToggle }: {
+  page: Page; selectedAreaId: string | null; areas: Area[]; sessions: Session[];
+  onNavigate: (p: Page) => void; onSelectArea: (id: string) => void;
+  collapsed: boolean; onToggle: () => void;
+}) {
+  const navItem = (p: Page, Icon: React.ElementType, label: string) => {
+    const active = page === p && !selectedAreaId;
+    return (
+      <button key={p} onClick={() => { onNavigate(p); onSelectArea(""); }}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${active ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}>
+        <Icon className="w-4 h-4 flex-shrink-0" />
+        {!collapsed && <span>{label}</span>}
+      </button>
+    );
+  };
+
+  return (
+    <aside className={`flex-shrink-0 flex flex-col border-r border-border bg-sidebar transition-all duration-300 ${collapsed ? "w-14" : "w-56"}`}>
+      <div className="flex items-center gap-2.5 px-3 py-4 border-b border-border">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#34d399,#60a5fa)" }}>
+          <GraduationCap className="w-4.5 h-4.5 text-white" />
+        </div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-foreground leading-none">StudyENEM</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5 leading-none">{DAYS_TO_ENEM}d para o ENEM</div>
+          </div>
+        )}
+        <button onClick={onToggle} className="ml-auto text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+          <Menu className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        {navItem("dashboard", LayoutDashboard, "Dashboard")}
+
+        {!collapsed && <div className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest px-3 pt-3 pb-1">Matérias</div>}
+
+        {areas.map(area => {
+          const Icon = AREA_ICONS[area.id] || BookOpen;
+          const active = selectedAreaId === area.id;
+          const pct = calcProgress(area);
+          return (
+            <button key={area.id} onClick={() => { onSelectArea(area.id); onNavigate("area"); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${active ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}
+              style={active ? { background: `${area.color}15` } : {}}>
+              <Icon className="w-4 h-4 flex-shrink-0" style={active ? { color: area.color } : {}} />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left truncate">{area.short}</span>
+                  <span className="text-[11px] font-medium tabular-nums" style={{ color: area.color, fontFamily: "'JetBrains Mono', monospace" }}>{pct}%</span>
+                </>
+              )}
+            </button>
+          );
+        })}
+
+        {!collapsed && <div className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest px-3 pt-3 pb-1">Análise</div>}
+
+        {navItem("analytics", BarChart3, "Analytics")}
+        {navItem("sessions", Clock, "Sessões")}
+      </nav>
+
+      {!collapsed && (
+        <div className="p-3 border-t border-border">
+          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-white/5">
+            <Flame className="w-4 h-4 text-orange-400 flex-shrink-0" />
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-foreground">{calcStreak(sessions)} dias seguidos</div>
+              <div className="text-[10px] text-muted-foreground">Sequência de estudos</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+// ─── Dashboard Page ───────────────────────────────────────────────────────────
+function DashboardPage({ areas, sessions, onSelectArea, onNavigate }: {
+  areas: Area[]; sessions: Session[];
+  onSelectArea: (id: string) => void; onNavigate: (p: Page) => void;
+}) {
+  const radarData = areas.map(a => ({ area: a.short, value: calcProgress(a), color: a.color }));
+  const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
+
+  const weeklyData = useMemo(() => {
+    const days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const map: Record<string, number> = {};
+    sessions.forEach(s => {
+      const day = days[new Date(s.date).getDay()];
+      map[day] = (map[day] || 0) + s.duration;
+    });
+    return days.map(d => ({ day: d, minutos: Math.round((map[d] || 0) / 60 * 10) / 10 }));
+  }, [sessions]);
+
+  const upcoming = getUpcomingReviews(areas);
+  const allSubs = areas.flatMap(a => a.topics.flatMap(t => t.subtopics));
+  const masteredCount = allSubs.filter(s => s.status === "mastered").length;
+
+
+  return (
+    <div className="p-6 space-y-6 max-w-[1400px]">
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-widest">Bem-vinda de volta</div>
+          <h1 className="text-2xl font-semibold text-foreground">Maria Clara</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            <span className="text-primary font-medium">{DAYS_TO_ENEM}</span> dias para o ENEM 2026 · Você está no caminho certo!
+          </p>
+        </div>
+        <div className="hidden md:flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <span className="text-sm font-medium text-foreground">{calcStreak(sessions)} dias</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg">
+            <Award className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm font-medium text-foreground">{masteredCount} dominados</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Area Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {areas.map(area => {
+          const pct = calcProgress(area);
+          const subtopics = area.topics.flatMap(t => t.subtopics);
+          const mastered = subtopics.filter(s => s.status === "mastered").length;
+          const Icon = AREA_ICONS[area.id] || BookOpen;
+          return (
+            <button key={area.id} onClick={() => { onSelectArea(area.id); onNavigate("area"); }}
+              className="bg-card border border-border rounded-xl p-4 text-left hover:border-white/15 transition-all hover:-translate-y-0.5 group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${area.color}1a` }}>
+                  <Icon className="w-4 h-4" style={{ color: area.color }} />
+                </div>
+                <span className="text-lg font-bold" style={{ color: area.color, fontFamily: "'JetBrains Mono', monospace" }}>{pct}%</span>
+              </div>
+              <div className="text-sm font-medium text-foreground mb-0.5 truncate">{area.short}</div>
+              <div className="text-[11px] text-muted-foreground mb-2">{mastered}/{subtopics.length} dominados</div>
+              <ProgressBar value={pct} color={area.color} />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="text-sm font-medium text-foreground mb-4">Visão Geral por Área</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <RadarChart data={radarData}>
+              <PolarGrid gridType="polygon" stroke="rgba(255,255,255,0.06)" />
+              <PolarAngleAxis dataKey="area" tick={{ fill: "#5b6a8a", fontSize: 11, fontFamily: "Lexend" }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+              <Radar dataKey="value" fill="rgba(52,211,153,0.12)" stroke="#34d399" strokeWidth={2} dot={{ fill: "#34d399", r: 3 }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="text-sm font-medium text-foreground mb-4">Horas de Estudo por Dia da Semana</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={weeklyData} barSize={24}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <XAxis dataKey="day" tick={{ fill: "#5b6a8a", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#5b6a8a", fontSize: 11, fontFamily: "Lexend" }} axisLine={false} tickLine={false} unit="h" />
+              <Tooltip
+                contentStyle={{ background: "#0d1425", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: "#dde5f4" }}
+                cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+              <Bar dataKey="minutos" name="horas" fill="#34d399" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Bottom row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Upcoming reviews */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm font-medium text-foreground">Revisões Agendadas</div>
+            <RotateCcw className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            {upcoming.length === 0 && (
+              <div className="text-sm text-muted-foreground py-4 text-center">Nenhuma revisão pendente</div>
+            )}
+            {upcoming.map(item => (
+              <div key={item.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.areaColor }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-foreground truncate">{item.name}</div>
+                  <div className="text-[11px] text-muted-foreground">{item.areaName}</div>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${item.daysLeft <= 0 ? "bg-red-500/15 text-red-400" : item.daysLeft === 1 ? "bg-yellow-500/15 text-yellow-400" : "bg-blue-500/15 text-blue-400"}`}
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {item.daysLeft <= 0 ? "Hoje" : item.daysLeft === 1 ? "Amanhã" : `+${item.daysLeft}d`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent sessions */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm font-medium text-foreground">Sessões Recentes</div>
+            <button onClick={() => onNavigate("sessions")} className="text-xs text-primary hover:text-primary/80 transition-colors">Ver todas</button>
+          </div>
+          <div className="space-y-2">
+            {sessions.slice(0, 5).map(s => {
+              const area = areas.find(a => a.id === s.areaId);
+              return (
+                <div key={s.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: area?.color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-foreground truncate">{s.topicName}</div>
+                    <div className="text-[11px] text-muted-foreground">{s.date}</div>
+                  </div>
+                  <span className="text-xs text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.duration}min</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Area Page ────────────────────────────────────────────────────────────────
+function AreaPage({ area, onUpdate }: {
+  area: Area;
+  onUpdate: (areaId: string, subId: string, changes: Partial<Subtopic>) => void;
+}) {
+  const [openTopics, setOpenTopics] = useState<Set<string>>(new Set([area.topics[0]?.id]));
+  const pct = calcProgress(area);
+  const allSubs = area.topics.flatMap(t => t.subtopics);
+  const mastered = allSubs.filter(s => s.status === "mastered").length;
+  const Icon = AREA_ICONS[area.id] || BookOpen;
+
+  const toggleTopic = (id: string) => {
+    setOpenTopics(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  const cycleStatus = (sub: Subtopic) => {
+    const idx = STATUS_CYCLE.indexOf(sub.status);
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    onUpdate(area.id, sub.id, { status: next });
+  };
+
+  const statusCount = (status: Status) => allSubs.filter(s => s.status === status).length;
+
+  return (
+    <div className="p-6 max-w-[900px] space-y-5">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: `${area.color}1a` }}>
+          <Icon className="w-6 h-6" style={{ color: area.color }} />
+        </div>
+        <div className="flex-1">
+          <h1 className="text-xl font-semibold text-foreground">{area.name}</h1>
+          <div className="flex flex-wrap gap-2 mt-2 text-[11px] text-muted-foreground">
+            {(["mastered", "practicing", "learning", "revision_needed", "not_started"] as Status[]).map(st => (
+              <span key={st} className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: STATUS_CFG[st].color }} />
+                {statusCount(st)} {STATUS_CFG[st].label.toLowerCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-3xl font-bold" style={{ color: area.color, fontFamily: "'JetBrains Mono', monospace" }}>{pct}%</div>
+          <div className="text-xs text-muted-foreground mt-0.5">{mastered}/{allSubs.length} dominados</div>
+        </div>
+      </div>
+      <ProgressBar value={pct} color={area.color} height={6} />
+
+      {/* Topic accordions */}
+      <div className="space-y-2">
+        {area.topics.map(topic => {
+          const isOpen = openTopics.has(topic.id);
+          const topicPct = (() => {
+            const s = topic.subtopics;
+            if (!s.length) return 0;
+            const scored = s.reduce((acc, x) => {
+              if (x.status === "mastered") return acc + 1;
+              if (x.status === "practicing") return acc + 0.6;
+              if (x.status === "learning") return acc + 0.3;
+              return acc;
+            }, 0);
+            return Math.round((scored / s.length) * 100);
+          })();
+          return (
+            <div key={topic.id} className="bg-card border border-border rounded-xl overflow-hidden">
+              <button className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/3 transition-colors"
+                onClick={() => toggleTopic(topic.id)}>
+                <div className="w-5 h-5 flex items-center justify-center text-muted-foreground">
+                  {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="text-sm font-medium text-foreground">{topic.name}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{topic.subtopics.length} subtópicos</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-20 hidden sm:block">
+                    <ProgressBar value={topicPct} color={area.color} height={4} />
+                  </div>
+                  <span className="text-xs font-medium tabular-nums w-8 text-right" style={{ color: area.color, fontFamily: "'JetBrains Mono', monospace" }}>{topicPct}%</span>
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="border-t border-border">
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest border-b border-border">
+                    <span>Subtópico</span>
+                    <span className="hidden sm:block">Status</span>
+                    <span>Domínio</span>
+                    <span className="hidden md:block">Próx. revisão</span>
+                  </div>
+                  {topic.subtopics.map(s => (
+                    <div key={s.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 border-b border-border last:border-0 hover:bg-white/3 transition-colors">
+                      <div className="text-sm text-foreground truncate">{s.name}</div>
+                      <button className="hidden sm:block" onClick={() => cycleStatus(s)} title="Clique para alterar o status">
+                        <StatusBadge status={s.status} />
+                      </button>
+                      <MasteryStars score={s.mastery}
+                        onChange={n => onUpdate(area.id, s.id, { mastery: n })} />
+                      <div className="hidden md:block text-[11px] text-muted-foreground text-right whitespace-nowrap"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {s.nextReview ? s.nextReview : "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Heatmap ──────────────────────────────────────────────────────────────────
+function StudyHeatmap({ sessions }: { sessions: Session[] }) {
+  const cells = useMemo(() => {
+    const map = new Map<string, number>();
+    sessions.forEach(s => map.set(s.date, (map.get(s.date) || 0) + s.duration));
+    const result: Array<{ date: string; minutes: number } | null> = [];
+    for (let i = 90; i >= 0; i--) {
+      const dt = new Date(TODAY.getTime() - i * 86400000);
+      const key = dt.toISOString().split("T")[0];
+      result.push({ date: key, minutes: map.get(key) || 0 });
+    }
+    const firstDay = new Date(TODAY.getTime() - 90 * 86400000).getDay();
+    const offset = firstDay === 0 ? 6 : firstDay - 1;
+    return [...Array(offset).fill(null), ...result];
+  }, [sessions]);
+
+  const weeks: Array<Array<{ date: string; minutes: number } | null>> = [];
+  for (let i = 0; i < Math.ceil(cells.length / 7); i++) {
+    weeks.push(cells.slice(i * 7, (i + 1) * 7));
+  }
+
+  const getColor = (m: number) => {
+    if (m === 0) return "rgba(255,255,255,0.04)";
+    if (m <= 45) return "rgba(52,211,153,0.25)";
+    if (m <= 90) return "rgba(52,211,153,0.5)";
+    if (m <= 150) return "rgba(52,211,153,0.75)";
+    return "#34d399";
+  };
+
+  return (
+    <div className="flex gap-1 overflow-x-auto pb-1">
+      {weeks.map((week, wi) => (
+        <div key={wi} className="flex flex-col gap-1">
+          {week.map((cell, di) => (
+            <div key={di} className="w-3 h-3 rounded-sm"
+              style={{ background: cell ? getColor(cell.minutes) : "transparent" }}
+              title={cell ? `${cell.date}: ${cell.minutes}min` : ""} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Analytics Page ───────────────────────────────────────────────────────────
+function AnalyticsPage({ areas, sessions }: { areas: Area[]; sessions: Session[] }) {
+  const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
+  const allSubs = areas.flatMap(a => a.topics.flatMap(t => t.subtopics));
+  const masteredCount = allSubs.filter(s => s.status === "mastered").length;
+  const studyDays = new Set(sessions.map(s => s.date)).size;
+  const avgMastery = (allSubs.filter(s => s.mastery > 1).reduce((a, s) => a + s.mastery, 0) / allSubs.filter(s => s.mastery > 1).length).toFixed(1);
+
+  const areaBarData = areas.map(a => ({
+    name: a.short,
+    progress: calcProgress(a),
+    color: a.color,
+  }));
+
+  const weakTopics = getWeakTopics(areas);
+
+  const statusData = [
+    { name: "Dominado", value: allSubs.filter(s => s.status === "mastered").length, color: "#34d399" },
+    { name: "Praticando", value: allSubs.filter(s => s.status === "practicing").length, color: "#fbbf24" },
+    { name: "Aprendendo", value: allSubs.filter(s => s.status === "learning").length, color: "#60a5fa" },
+    { name: "Revisar", value: allSubs.filter(s => s.status === "revision_needed").length, color: "#f87171" },
+    { name: "Não iniciado", value: allSubs.filter(s => s.status === "not_started").length, color: "#374151" },
+  ];
+
+  return (
+    <div className="p-6 space-y-5 max-w-[1200px]">
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">Analytics</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Visão detalhada do seu desempenho</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard icon={Clock} label="Horas estudadas" value={`${(totalMinutes / 60).toFixed(0)}h`} sub="últimos 30 dias" color="#60a5fa" />
+        <StatCard icon={Calendar} label="Dias de estudo" value={`${studyDays}`} sub="últimos 30 dias" color="#a78bfa" />
+        <StatCard icon={Award} label="Subtópicos dominados" value={`${masteredCount}`} sub={`de ${allSubs.length} total`} color="#34d399" />
+        <StatCard icon={TrendingUp} label="Domínio médio" value={`${avgMastery}/5`} sub="subtópicos estudados" color="#fbbf24" />
+      </div>
+
+      {/* Heatmap */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-medium text-foreground">Atividade de Estudo (90 dias)</div>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span>Menos</span>
+            {[0, 45, 90, 150, 200].map((m, i) => (
+              <div key={i} className="w-3 h-3 rounded-sm" style={{ background: m === 0 ? "rgba(255,255,255,0.04)" : m <= 45 ? "rgba(52,211,153,0.25)" : m <= 90 ? "rgba(52,211,153,0.5)" : m <= 150 ? "rgba(52,211,153,0.75)" : "#34d399" }} />
+            ))}
+            <span>Mais</span>
+          </div>
+        </div>
+        <StudyHeatmap sessions={sessions} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Area progress bar chart */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="text-sm font-medium text-foreground mb-4">Progresso por Área</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={areaBarData} layout="vertical" barSize={20}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} tick={{ fill: "#5b6a8a", fontSize: 11 }} axisLine={false} tickLine={false} unit="%" />
+              <YAxis type="category" dataKey="name" tick={{ fill: "#dde5f4", fontSize: 12, fontFamily: "Lexend" }} axisLine={false} tickLine={false} width={40} />
+              <Tooltip
+                contentStyle={{ background: "#0d1425", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
+                cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+              <Bar dataKey="progress" name="Progresso" radius={[0, 4, 4, 0]}>
+                {areaBarData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Status distribution */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="text-sm font-medium text-foreground mb-4">Distribuição por Status</div>
+          <div className="space-y-3">
+            {statusData.map(item => (
+              <div key={item.name} className="flex items-center gap-3">
+                <div className="w-24 text-xs text-muted-foreground">{item.name}</div>
+                <div className="flex-1">
+                  <div className="h-5 rounded-md overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <div className="h-full rounded-md transition-all duration-700"
+                      style={{ width: `${(item.value / allSubs.length) * 100}%`, background: item.color + "99" }} />
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground w-6 text-right tabular-nums"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Weak topics */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertCircle className="w-4 h-4 text-red-400" />
+          <div className="text-sm font-medium text-foreground">Tópicos que precisam de atenção</div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {weakTopics.map(item => (
+            <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-white/2">
+              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.areaColor }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-foreground truncate">{item.name}</div>
+                <div className="text-[11px] text-muted-foreground truncate">{item.areaName} › {item.topicName}</div>
+              </div>
+              <MasteryStars score={item.mastery} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Sessions Page ────────────────────────────────────────────────────────────
+function SessionsPage({ areas, sessions, onAdd }: {
+  areas: Area[]; sessions: Session[];
+  onAdd: (s: Session) => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ areaId: areas[0]?.id || "", topicName: "", duration: "", notes: "" });
+
+  const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
+
+  const handleSubmit = () => {
+    if (!form.topicName.trim() || !form.duration) return;
+    onAdd({
+      id: `s${Date.now()}`,
+      date: todayStr,
+      areaId: form.areaId,
+      topicName: form.topicName.trim(),
+      duration: parseInt(form.duration),
+      notes: form.notes.trim(),
+    });
+    setForm({ areaId: areas[0]?.id || "", topicName: "", duration: "", notes: "" });
+    setShowForm(false);
+  };
+
+
+  return (
+    <div className="p-6 space-y-5 max-w-[900px]">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Sessões de Estudo</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {sessions.length} sessões · {(totalMinutes / 60).toFixed(0)}h totais
+          </p>
+        </div>
+        <button onClick={() => setShowForm(v => !v)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+          <Plus className="w-4 h-4" />
+          Nova sessão
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          <div className="text-sm font-medium text-foreground">Registrar Sessão</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Área</label>
+              <select value={form.areaId} onChange={e => setForm(f => ({ ...f, areaId: e.target.value }))}
+                className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors">
+                {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Duração (min)</label>
+              <input type="number" min="1" max="600" placeholder="60" value={form.duration}
+                onChange={e => setForm(f => ({ ...f, duration: e.target.value }))}
+                className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Tópico estudado</label>
+            <input type="text" placeholder="Ex: Função logarítmica" value={form.topicName}
+              onChange={e => setForm(f => ({ ...f, topicName: e.target.value }))}
+              className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Anotações (opcional)</label>
+            <textarea rows={2} placeholder="O que você aprendeu ou quer lembrar..." value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors placeholder:text-muted-foreground resize-none" />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSubmit}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+              <Check className="w-3.5 h-3.5" /> Salvar
+            </button>
+            <button onClick={() => setShowForm(false)}
+              className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2.5 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest border-b border-border">
+          <span className="w-3" />
+          <span>Tópico / Área</span>
+          <span className="hidden sm:block">Data</span>
+          <span>Duração</span>
+        </div>
+        <div className="divide-y divide-border">
+          {sessions.map(s => {
+            const area = areas.find(a => a.id === s.areaId);
+            return (
+              <div key={s.id} className="grid grid-cols-[auto_1fr_auto_auto] gap-3 items-center px-4 py-3 hover:bg-white/3 transition-colors">
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-0.5" style={{ background: area?.color }} />
+                <div className="min-w-0">
+                  <div className="text-sm text-foreground truncate">{s.topicName}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{area?.name}{s.notes ? ` · ${s.notes}` : ""}</div>
+                </div>
+                <div className="hidden sm:block text-[11px] text-muted-foreground whitespace-nowrap"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.date}</div>
+                <div className="text-xs font-medium text-muted-foreground whitespace-nowrap"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.duration}min</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Top Bar ──────────────────────────────────────────────────────────────────
+function TopBar({ page, selectedArea, onSearch }: {
+  page: Page; selectedArea: Area | null; onSearch: () => void;
+}) {
+  const titles: Record<Page, string> = {
+    dashboard: "Dashboard", area: selectedArea?.name || "", analytics: "Analytics", sessions: "Sessões de Estudo",
+  };
+
+  return (
+    <header className="h-14 flex-shrink-0 border-b border-border flex items-center gap-4 px-5">
+      <div className="flex-1 flex items-center gap-2">
+        {selectedArea && (
+          <div className="w-2 h-2 rounded-full" style={{ background: selectedArea.color }} />
+        )}
+        <h2 className="text-sm font-medium text-foreground">{titles[page]}</h2>
+      </div>
+
+      <button onClick={onSearch}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-white/3 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all">
+        <Search className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Buscar conteúdo...</span>
+        <kbd className="hidden sm:inline text-[10px] bg-white/10 px-1.5 py-0.5 rounded">⌘K</kbd>
+      </button>
+
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-white/3 text-xs text-muted-foreground">
+        <Zap className="w-3.5 h-3.5 text-yellow-400" />
+        <span className="hidden sm:inline">{DAYS_TO_ENEM}d para o ENEM</span>
+      </div>
+
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 border border-white/10 flex items-center justify-center text-xs font-semibold text-foreground">
+        MC
+      </div>
+    </header>
+  );
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [areas, setAreas] = useState<Area[]>(INITIAL_AREAS);
+  const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
+  const [page, setPage] = useState<Page>("dashboard");
+  const [selectedAreaId, setSelectedAreaId] = useState<string>("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Cmd+K to open search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setSearchOpen(true); }
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const selectedArea = areas.find(a => a.id === selectedAreaId) || null;
+
+  const handleUpdate = (areaId: string, subId: string, changes: Partial<Subtopic>) => {
+    setAreas(prev => prev.map(area => {
+      if (area.id !== areaId) return area;
+      return {
+        ...area,
+        topics: area.topics.map(topic => ({
+          ...topic,
+          subtopics: topic.subtopics.map(s => s.id === subId ? { ...s, ...changes } : s),
+        })),
+      };
+    }));
+  };
+
+  const handleSelectArea = (id: string) => {
+    setSelectedAreaId(id);
+    if (id) setPage("area");
+  };
+
+  const handleNavigate = (p: Page) => {
+    setPage(p);
+    if (p !== "area") setSelectedAreaId("");
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-background">
+      <Sidebar
+        page={page}
+        selectedAreaId={selectedAreaId}
+        areas={areas}
+        sessions={sessions}
+        onNavigate={handleNavigate}
+        onSelectArea={handleSelectArea}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(v => !v)}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <TopBar page={page} selectedArea={selectedArea} onSearch={() => setSearchOpen(true)} />
+        <main className="flex-1 overflow-y-auto">
+          {page === "dashboard" && (
+            <DashboardPage areas={areas} sessions={sessions} onSelectArea={handleSelectArea} onNavigate={handleNavigate} />
+          )}
+          {page === "area" && selectedArea && (
+            <AreaPage area={selectedArea} onUpdate={handleUpdate} />
+          )}
+          {page === "analytics" && (
+            <AnalyticsPage areas={areas} sessions={sessions} />
+          )}
+          {page === "sessions" && (
+            <SessionsPage areas={areas} sessions={sessions} onAdd={s => setSessions(prev => [s, ...prev])} />
+          )}
+        </main>
+      </div>
+
+      {searchOpen && (
+        <SearchModal areas={areas} onClose={() => setSearchOpen(false)} onSelectArea={handleSelectArea} />
+      )}
+    </div>
+  );
+}
