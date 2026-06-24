@@ -447,8 +447,8 @@ function AreaPage({ area, onUpdate }: {
       <ProgressBar value={pct} color={area.color} height={6} />
 
       {/* Books Section */}
-      <div style={{ marginTop: "2rem", marginBottom: "1.5rem" }}>
-        <div style={{ fontSize: "11px", fontWeight: 700, color: "rgba(150,160,190,0.8)", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+      <div>
+        <div style={{ fontSize: "11px", fontWeight: 700, color: area.color, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>
           📚 Materiais Didáticos
         </div>
         <div style={{ display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem" }}>
@@ -461,25 +461,23 @@ function AreaPage({ area, onUpdate }: {
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem",
                 padding: "1rem", borderRadius: "1rem",
-                border: `1.5px solid ${area.color}40`,
-                background: `${area.color}12`,
-                minWidth: "120px", maxWidth: "140px", flexShrink: 0,
-                textDecoration: "none", cursor: "pointer", transition: "transform 0.15s",
+                border: `2px solid ${area.color}`,
+                background: `${area.color}22`,
+                minWidth: "130px", maxWidth: "150px", flexShrink: 0,
+                textDecoration: "none", cursor: "pointer",
               }}
-              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")}
-              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
             >
               <div style={{
-                width: "52px", height: "52px", borderRadius: "12px",
-                background: `${area.color}30`,
+                width: "56px", height: "56px", borderRadius: "12px",
+                background: area.color,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "26px",
+                fontSize: "28px",
               }}>
                 📖
               </div>
               <div style={{
                 fontSize: "11px", fontWeight: 700, textAlign: "center",
-                color: "#e2e8f0", lineHeight: "1.4",
+                color: area.color, lineHeight: "1.4",
                 display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
               }}>
                 {topic.name}
