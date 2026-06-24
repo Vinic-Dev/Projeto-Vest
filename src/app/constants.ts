@@ -10,6 +10,6 @@ export const STATUS_CFG: Record<Status, { label: string; color: string; bg: stri
 
 export const STATUS_CYCLE: Status[] = ["not_started", "learning", "practicing", "mastered", "revision_needed"];
 
-const VEST_DATE = new Date("2026-11-03");
+const VEST_DATE = new Date("2026-09-27");
 const TODAY = new Date();
 export const DAYS_TO_VEST = Math.ceil((VEST_DATE.getTime() - TODAY.getTime()) / 86400000);
