@@ -382,19 +382,11 @@ function AreaPage({ area, onUpdate }: {
   area: Area;
   onUpdate: (areaId: string, subId: string, changes: Partial<Subtopic>) => void;
 }) {
-  const [openTopics, setOpenTopics] = useState<Set<string>>(new Set([area.topics[0]?.id]));
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const pct = calcProgress(area);
   const allSubs = area.topics.flatMap(t => t.subtopics);
   const mastered = allSubs.filter(s => s.status === "mastered").length;
   const Icon = AREA_ICONS[area.id] || BookOpen;
-
-  const toggleTopic = (id: string) => {
-    setOpenTopics(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-  };
 
   const cycleStatus = (sub: Subtopic) => {
     const idx = STATUS_CYCLE.indexOf(sub.status);
@@ -404,8 +396,10 @@ function AreaPage({ area, onUpdate }: {
 
   const statusCount = (status: Status) => allSubs.filter(s => s.status === status).length;
 
+  const selectedTopic = area.topics.find(t => t.id === selectedTopicId);
+
   return (
-    <div className="p-6 max-w-[900px] space-y-5">
+    <div className="p-6 max-w-[1200px] space-y-8">
       {/* Header */}
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -430,10 +424,9 @@ function AreaPage({ area, onUpdate }: {
       </div>
       <ProgressBar value={pct} color={area.color} height={6} />
 
-      {/* Topic accordions */}
-      <div className="space-y-2">
+      {/* Grid of Topic Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {area.topics.map(topic => {
-          const isOpen = openTopics.has(topic.id);
           const topicPct = (() => {
             const s = topic.subtopics;
             if (!s.length) return 0;
@@ -445,53 +438,72 @@ function AreaPage({ area, onUpdate }: {
             }, 0);
             return Math.round((scored / s.length) * 100);
           })();
-          return (
-            <div key={topic.id} className="bg-card border border-border rounded-xl overflow-hidden">
-              <button className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/3 transition-colors"
-                onClick={() => toggleTopic(topic.id)}>
-                <div className="w-5 h-5 flex items-center justify-center text-muted-foreground">
-                  {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="text-sm font-medium text-foreground">{topic.name}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">{topic.subtopics.length} subtópicos</div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-20 hidden sm:block">
-                    <ProgressBar value={topicPct} color={area.color} height={4} />
-                  </div>
-                  <span className="text-xs font-medium tabular-nums w-8 text-right" style={{ color: area.color, fontFamily: "'JetBrains Mono', monospace" }}>{topicPct}%</span>
-                </div>
-              </button>
 
-              {isOpen && (
-                <div className="border-t border-border">
-                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest border-b border-border">
-                    <span>Subtópico</span>
-                    <span className="hidden sm:block">Status</span>
-                    <span>Domínio</span>
-                    <span className="hidden md:block">Próx. revisão</span>
-                  </div>
-                  {topic.subtopics.map(s => (
-                    <div key={s.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 border-b border-border last:border-0 hover:bg-white/3 transition-colors">
-                      <div className="text-sm text-foreground truncate">{s.name}</div>
-                      <button className="hidden sm:block" onClick={() => cycleStatus(s)} title="Clique para alterar o status">
-                        <StatusBadge status={s.status} />
-                      </button>
-                      <MasteryStars score={s.mastery}
-                        onChange={n => onUpdate(area.id, s.id, { mastery: n })} />
-                      <div className="hidden md:block text-[11px] text-muted-foreground text-right whitespace-nowrap"
-                        style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                        {s.nextReview ? s.nextReview : "—"}
-                      </div>
-                    </div>
-                  ))}
+          return (
+            <button key={topic.id} onClick={() => setSelectedTopicId(topic.id)}
+              className="bg-card border border-border rounded-2xl p-6 text-left hover:-translate-y-1 hover:border-primary/50 transition-all group flex flex-col h-full shadow-sm hover:shadow-md">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 group-hover:bg-primary/10 transition-colors">
+                  <Icon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
-              )}
-            </div>
+                <div className="text-xl font-bold" style={{ color: area.color, fontFamily: "'JetBrains Mono', monospace" }}>{topicPct}%</div>
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-1 leading-tight group-hover:text-primary transition-colors">{topic.name}</h3>
+              <p className="text-sm text-muted-foreground mb-6 flex-1">{topic.subtopics.length} subtópicos</p>
+              
+              <div className="w-full mt-auto">
+                <div className="flex justify-between text-[11px] mb-1.5 text-muted-foreground">
+                  <span>Progresso</span>
+                  <span style={{ color: area.color }}>{topic.subtopics.filter(s => s.status === "mastered").length} dominados</span>
+                </div>
+                <ProgressBar value={topicPct} color={area.color} height={6} />
+              </div>
+            </button>
           );
         })}
       </div>
+
+      {/* Pop-up Modal for Subtopics */}
+      {selectedTopic && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTopicId(null)}>
+          <div className="bg-card border border-border w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">{selectedTopic.name}</h2>
+                <p className="text-sm text-muted-foreground">{selectedTopic.subtopics.length} subtópicos</p>
+              </div>
+              <button onClick={() => setSelectedTopicId(null)} className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-2">
+              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-4 py-3 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest border-b border-border sticky top-0 bg-card z-10">
+                <span>Subtópico</span>
+                <span className="hidden sm:block">Status</span>
+                <span>Domínio</span>
+                <span className="hidden md:block">Próx. revisão</span>
+              </div>
+              <div className="divide-y divide-border">
+                {selectedTopic.subtopics.map(s => (
+                  <div key={s.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 items-center px-4 py-4 hover:bg-white/3 transition-colors">
+                    <div className="text-sm font-medium text-foreground pr-2">{s.name}</div>
+                    <button className="hidden sm:block" onClick={() => cycleStatus(s)} title="Clique para alterar o status">
+                      <StatusBadge status={s.status} />
+                    </button>
+                    <MasteryStars score={s.mastery}
+                      onChange={n => onUpdate(area.id, s.id, { mastery: n })} />
+                    <div className="hidden md:block text-xs font-medium text-muted-foreground text-right w-20"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {s.nextReview ? s.nextReview : "—"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
