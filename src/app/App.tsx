@@ -489,12 +489,26 @@ function AreaPage({ area, onUpdate }: {
       {selectedTopic && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTopicId(null)}>
           <div className="bg-card border border-border w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-border">
-              <div>
-                <h2 className="text-xl font-bold text-foreground">{selectedTopic.name}</h2>
-                <p className="text-sm text-muted-foreground">{selectedTopic.subtopics.length} subtópicos</p>
+            <div className="flex items-start justify-between p-5 border-b border-border">
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">{selectedTopic.name}</h2>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedTopic.subtopics.length} subtópicos para estudar</p>
+                </div>
+                
+                {/* Book Link */}
+                <a href={`livros/${encodeURIComponent(selectedTopic.name)}.pdf`} target="_blank" rel="noopener noreferrer" 
+                   className="flex items-center gap-4 p-3 pr-6 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors w-max group shadow-sm">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/20 text-primary group-hover:scale-110 transition-transform">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Livro de {selectedTopic.name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Abrir PDF do material</div>
+                  </div>
+                </a>
               </div>
-              <button onClick={() => setSelectedTopicId(null)} className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setSelectedTopicId(null)} className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
