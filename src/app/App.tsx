@@ -447,16 +447,41 @@ function AreaPage({ area, onUpdate }: {
       <ProgressBar value={pct} color={area.color} height={6} />
 
       {/* Books Section */}
-      <div className="mt-8 mb-4">
-        <h2 className="text-xs font-bold text-muted-foreground/80 mb-4 uppercase tracking-widest">Materiais Didáticos</h2>
-        <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+      <div style={{ marginTop: "2rem", marginBottom: "1.5rem" }}>
+        <div style={{ fontSize: "11px", fontWeight: 700, color: "rgba(150,160,190,0.8)", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+          📚 Materiais Didáticos
+        </div>
+        <div style={{ display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem" }}>
           {area.topics.map(topic => (
-            <a key={topic.id} href={`livros/${encodeURIComponent(topic.name)}.pdf`} target="_blank" rel="noopener noreferrer" 
-               className="flex flex-col items-center gap-3 p-4 rounded-2xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all w-36 flex-shrink-0 group shadow-sm snap-start">
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-primary/10 text-primary group-hover:scale-110 transition-transform shadow-inner">
-                <BookOpen className="w-7 h-7" />
+            <a
+              key={topic.id}
+              href={`livros/${encodeURIComponent(topic.name)}.pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem",
+                padding: "1rem", borderRadius: "1rem",
+                border: `1.5px solid ${area.color}40`,
+                background: `${area.color}12`,
+                minWidth: "120px", maxWidth: "140px", flexShrink: 0,
+                textDecoration: "none", cursor: "pointer", transition: "transform 0.15s",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")}
+              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              <div style={{
+                width: "52px", height: "52px", borderRadius: "12px",
+                background: `${area.color}30`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "26px",
+              }}>
+                📖
               </div>
-              <div className="text-xs font-bold text-center text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-3">
+              <div style={{
+                fontSize: "11px", fontWeight: 700, textAlign: "center",
+                color: "#e2e8f0", lineHeight: "1.4",
+                display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+              }}>
                 {topic.name}
               </div>
             </a>
