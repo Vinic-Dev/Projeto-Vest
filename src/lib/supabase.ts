@@ -1,17 +1,12 @@
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
 
 // ─── Supabase Client (Singleton) ──────────────────────────────────────────────
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// URL e chave pública — credenciais públicas por design.
+// A segurança é gerida pelo backend via Row Level Security (RLS).
+const SUPABASE_URL = 'https://korjbphaqprewuvsusrb.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_L-dq2PRp9wOcU70ukpRnTw_3X6gXUqz';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    '[Supabase] Variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não configuradas. ' +
-    'Crie um arquivo .env na raiz do projeto com essas variáveis.'
-  );
-}
-
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // ─── Auth Helpers ─────────────────────────────────────────────────────────────
 export async function signUp(email: string, password: string, fullName: string) {
