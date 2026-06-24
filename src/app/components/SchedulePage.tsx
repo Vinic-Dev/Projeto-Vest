@@ -186,7 +186,7 @@ export default function SchedulePage({ areas, events, onSave }: {
 
             return (
               <div key={evt.id} 
-                className="absolute rounded-lg p-2.5 shadow-md text-white overflow-hidden cursor-pointer hover:brightness-110 transition-all border border-white/10 flex flex-col"
+                className="absolute rounded-lg p-1.5 shadow-md text-white overflow-hidden cursor-pointer hover:brightness-110 transition-all border border-white/10 flex flex-col"
                 style={{ 
                   top: `${top + 2}px`, 
                   left: `calc(60px + ${dayIndex} * ((100% - 60px) / 7) + 4px)`, 
@@ -195,7 +195,7 @@ export default function SchedulePage({ areas, events, onSave }: {
                 }}
                 onClick={(e) => handleEventClick(e, evt)}
               >
-                <div className="text-xs font-bold truncate leading-tight drop-shadow-sm">{sub?.name || area.name}</div>
+                <div className="text-[11px] font-bold line-clamp-2 leading-tight drop-shadow-sm">{sub?.name || area.name}</div>
                 <div className="text-[10px] opacity-90 mt-auto font-medium bg-black/10 self-start px-1.5 py-0.5 rounded flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-white/50 rounded-full" /> {evt.durationHours}h
                 </div>
@@ -297,7 +297,7 @@ export default function SchedulePage({ areas, events, onSave }: {
           <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-border">
             <div className="flex items-center justify-between p-5 border-b border-border">
               <h3 className="text-lg font-semibold text-foreground">
-                {editingEvent ? "Editar Aula" : "Agendar Matéria"}
+                {editingEvent ? "Editar estudo" : "Agendar Matéria"}
               </h3>
               <button onClick={() => setModalOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/5 text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
