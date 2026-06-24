@@ -15,9 +15,10 @@ import type { User } from "@supabase/supabase-js";
 import LoginPage from "./components/LoginPage";
 import ManageAreasPage from "./components/ManageAreasPage";
 import ActiveSessionTimer from "./components/ActiveSessionTimer";
+import SchedulePage from "./components/SchedulePage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-import type { Status, Page, Subtopic, Topic, Area, Session } from "./types";
+import type { Status, Page, Subtopic, Topic, Area, Session, ScheduleEvent } from "./types";
 import { STATUS_CFG, STATUS_CYCLE, DAYS_TO_VEST } from "./constants";
 import { INITIAL_AREAS } from "./data";
 
@@ -284,6 +285,7 @@ function Sidebar({ page, selectedAreaId, areas, sessions, onNavigate, onSelectAr
         })}
 
         <div className="mt-4 border-t border-border pt-4">
+          {navItem("schedule", Calendar, "Cronograma")}
           {navItem("manage", Settings, "Gerenciar Matérias")}
         </div>
 
@@ -745,7 +747,7 @@ function TopBar({ page, selectedArea, onSearch, userInitials, onToggleSidebar }:
   onToggleSidebar?: () => void;
 }) {
   const titles: Record<Page, string> = {
-    dashboard: "Dashboard", area: selectedArea?.name || ""
+    dashboard: "Dashboard", area: selectedArea?.name || "", manage: "Gerenciar Matérias", schedule: "Cronograma"
   };
 
   return (
@@ -793,6 +795,7 @@ export default function App() {
   // ─── App State ─────────────────────────────────────────────
   const [areas, setAreas] = useState<Area[]>(INITIAL_AREAS);
   const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
+  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([]);
   const [page, setPage] = useState<Page>("dashboard");
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -819,9 +822,15 @@ export default function App() {
         } else {
           setAreas(INITIAL_AREAS);
         }
+        if (profile?.schedule) {
+          setScheduleEvents(profile.schedule);
+        } else {
+          setScheduleEvents([]);
+        }
       } else {
         setUserName("");
         setAreas(INITIAL_AREAS);
+        setScheduleEvents([]);
       }
       setAuthLoading(false);
     });
@@ -841,6 +850,21 @@ export default function App() {
     } catch (err) {
       console.error("Erro ao salvar configuração de matérias:", err);
       alert("Erro ao salvar as configurações no banco de dados.");
+    }
+  };
+
+  const handleSaveSchedule = async (newEvents: ScheduleEvent[]) => {
+    setScheduleEvents(newEvents);
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ schedule: newEvents })
+        .eq('id', user.id);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Erro ao salvar cronograma:", err);
+      alert("Erro ao salvar o cronograma no banco de dados.");
     }
   };
 
@@ -1049,6 +1073,9 @@ export default function App() {
           )}
           {page === "manage" && (
             <ManageAreasPage areas={areas} onSave={handleSaveAreasConfig} />
+          )}
+          {page === "schedule" && (
+            <SchedulePage areas={areas} events={scheduleEvents} onSave={handleSaveSchedule} />
           )}
         </main>
       </div>

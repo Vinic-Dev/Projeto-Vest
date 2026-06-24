@@ -65,7 +65,7 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
 export async function getUserProfile(userId: string) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('full_name, custom_areas')
+    .select('full_name, custom_areas, schedule')
     .eq('id', userId)
     .single();
   if (error) return null;
@@ -99,6 +99,8 @@ export const SUPABASE_SQL_SETUP = `-- Execute este SQL no SQL Editor do Supabase
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT NOT NULL,
+  custom_areas JSONB DEFAULT NULL,
+  schedule JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 

@@ -1,5 +1,5 @@
 export type Status = "not_started" | "learning" | "practicing" | "mastered" | "revision_needed";
-export type Page = "dashboard" | "area" | "manage";
+export type Page = "dashboard" | "schedule" | "area" | "manage";
 
 export interface Subtopic {
   id: string;
@@ -31,4 +31,12 @@ export interface Session {
   areaId: string;
   topicName: string;
   notes: string;
+}
+
+export interface ScheduleEvent {
+  id: string;
+  dayOfWeek: number; // 0 (Dom) to 6 (Sab)
+  startHour: number; // 6 to 23
+  durationHours: number;
+  areaId: string;
 }
