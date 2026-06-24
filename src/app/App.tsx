@@ -14,6 +14,7 @@ import { supabase, signOut, onAuthStateChange, getUserProfile } from "../lib/sup
 import type { User } from "@supabase/supabase-js";
 import LoginPage from "./components/LoginPage";
 import ManageAreasPage from "./components/ManageAreasPage";
+import ActiveSessionTimer from "./components/ActiveSessionTimer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Status, Page, Subtopic, Topic, Area, Session } from "./types";
@@ -382,8 +383,11 @@ function DashboardPage({ areas, sessions, onSelectArea, onNavigate, userName, on
         })}
       </div>
 
+
+      <ActiveSessionTimer areas={areas} onSaveSession={onAddSession} />
+      
       <AnalyticsSection areas={areas} sessions={sessions} />
-      <SessionsSection areas={areas} sessions={sessions} onAdd={onAddSession} />
+      <SessionsSection areas={areas} sessions={sessions} />
     </div>
   );
 }
@@ -684,29 +688,10 @@ function AnalyticsSection({ areas, sessions }: { areas: Area[]; sessions: Sessio
 }
 
 // ─── Sessions Section ────────────────────────────────────────────────────────────
-function SessionsSection({ areas, sessions, onAdd }: {
+function SessionsSection({ areas, sessions }: {
   areas: Area[]; sessions: Session[];
-  onAdd: (s: Session) => void;
 }) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ areaId: areas[0]?.id || "", topicName: "", duration: "", notes: "" });
-
   const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
-
-  const handleSubmit = () => {
-    if (!form.topicName.trim() || !form.duration) return;
-    onAdd({
-      id: `s${Date.now()}`,
-      date: todayStr,
-      areaId: form.areaId,
-      topicName: form.topicName.trim(),
-      duration: parseInt(form.duration),
-      notes: form.notes.trim(),
-    });
-    setForm({ areaId: areas[0]?.id || "", topicName: "", duration: "", notes: "" });
-    setShowForm(false);
-  };
-
 
   return (
     <div className="p-6 space-y-5 max-w-[900px]">
@@ -717,55 +702,7 @@ function SessionsSection({ areas, sessions, onAdd }: {
             {sessions.length} sessões · {(totalMinutes / 60).toFixed(0)}h totais
           </p>
         </div>
-        <button onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-          <Plus className="w-4 h-4" />
-          Nova sessão
-        </button>
       </div>
-
-      {showForm && (
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-          <div className="text-sm font-medium text-foreground">Registrar Sessão</div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">Área</label>
-              <select value={form.areaId} onChange={e => setForm(f => ({ ...f, areaId: e.target.value }))}
-                className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors">
-                {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">Duração (min)</label>
-              <input type="number" min="1" max="600" placeholder="60" value={form.duration}
-                onChange={e => setForm(f => ({ ...f, duration: e.target.value }))}
-                className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Tópico estudado</label>
-            <input type="text" placeholder="Ex: Função logarítmica" value={form.topicName}
-              onChange={e => setForm(f => ({ ...f, topicName: e.target.value }))}
-              className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Anotações (opcional)</label>
-            <textarea rows={2} placeholder="O que você aprendeu ou quer lembrar..." value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-colors placeholder:text-muted-foreground resize-none" />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleSubmit}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-              <Check className="w-3.5 h-3.5" /> Salvar
-            </button>
-            <button onClick={() => setShowForm(false)}
-              className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2.5 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest border-b border-border">
